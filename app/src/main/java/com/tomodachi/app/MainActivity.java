@@ -164,7 +164,6 @@ public class MainActivity extends AppCompatActivity {
         //   الخلفية الأخرى بالتطبيق.
         // - تفعيل تسريع الأجهزة (Hardware layer) على WebView نفسه لتصيير أسلس
         //   للأنيميشن والتمرير (CSS transitions/transform تُرندر عبر GPU).
-        webView.setRenderPriority(WebView.RenderPriority.HIGH);
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
@@ -374,4 +373,4 @@ public class MainActivity extends AppCompatActivity {
         webView.destroy();
         super.onDestroy();
     }
-          }
+}
