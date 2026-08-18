@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- يسمح لأندرويد 13+ بإظهار "لغة التطبيق" الصحيحة (عربي) في إعدادات
+     النظام بدل الاعتماد فقط على لغة الجهاز العامة - لمسة تطبيق أصلي حقيقي. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="ar"/>
+</locale-config>
