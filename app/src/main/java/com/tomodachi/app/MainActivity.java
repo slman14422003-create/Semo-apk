@@ -34,6 +34,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.WebViewAssetLoader;
 
 import java.io.File;
@@ -95,6 +97,14 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         createNotificationChannel();
+
+        // Edge-to-edge حقيقي: المحتوى (WebView) يُرسم تحت شريط الحالة/التنقل
+        // بدل أن يتوقف عنده. هذا هو الفرق الأساسي بين "تطبيق فيه WebView"
+        // و"تطبيق حقيقي" بصرياً - المتصفحات لا تفعل هذا، التطبيقات الأصلية
+        // (واتساب/تيليجرام) نعم. صفحات الويب تستخدم أصلاً env(safe-area-inset-*)
+        // (راجع css/theme.css) فهي جاهزة لعرض محتواها الصحيح تحت الشريطين.
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        applyStatusBarStyle(false); // أيقونات فاتحة مبدئياً (خلفية العلامة التجارية داكنة)
 
         FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
@@ -242,11 +252,30 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new NativeBridge(), "AndroidBridge");
     }
 
+    /**
+     * يبدّل لون أيقونات شريط الحالة/التنقل (فاتحة على خلفية داكنة، أو داكنة
+     * على خلفية فاتحة) لتبقى مقروءة دائماً مهما كان ثيم التطبيق الحالي.
+     * @param lightBackground true لو خلفية الواجهة الحالية فاتحة (فيصير لون
+     *                         الأيقونات داكناً حتى تظهر فوقها بوضوح).
+     */
+    private void applyStatusBarStyle(boolean lightBackground) {
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(lightBackground);
+        controller.setAppearanceLightNavigationBars(lightBackground);
+    }
+
     /** يُستدعى من جافاسكربت عبر window.AndroidBridge.* */
     private class NativeBridge {
         @android.webkit.JavascriptInterface
         public void showMessageNotification(String title, String body) {
             runOnUiThread(() -> postNotification(title, body));
+        }
+
+        /** يُستدعى من js/themes.js في كل مرة يتغيّر فيها الوضع الليلي/النهاري. */
+        @android.webkit.JavascriptInterface
+        public void setStatusBarStyle(boolean lightBackground) {
+            runOnUiThread(() -> applyStatusBarStyle(lightBackground));
         }
     }
 
@@ -259,7 +288,12 @@ public class MainActivity extends AppCompatActivity {
 
         androidx.core.app.NotificationCompat.Builder builder =
                 new androidx.core.app.NotificationCompat.Builder(this, NOTIF_CHANNEL_ID)
-                        .setSmallIcon(R.mipmap.ic_launcher)
+                        // ملاحظة: أندرويد يرسم "الأيقونة الصغيرة" بشريط الحالة كظل أبيض
+                        // شفاف فقط (منذ أندرويد 5) - أيقونة التطبيق الملوّنة الكاملة كانت
+                        // تظهر ككتلة بيضاء مبهمة بلا شكل. الأيقونة أدناه رسم بسيط
+                        // أحادي اللون مخصص لهذا الغرض تحديداً.
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setColor(ContextCompat.getColor(this, R.color.brand_bg))
                         .setContentTitle(title == null || title.isEmpty() ? "Tomodachi" : title)
                         .setContentText(body == null ? "" : body)
                         .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(body == null ? "" : body))
