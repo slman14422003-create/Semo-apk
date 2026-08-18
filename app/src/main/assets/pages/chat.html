@@ -1,0 +1,143 @@
+-e <!--
+    ملاحظة: هذا الملف نسخة مطابقة (مصدر مرجعي) لنفس الـ HTML المستخدم فعليًا
+    جوه index.html (السطور المقابلة). التطبيق حاليًا Single Page App وكل
+    الشاشات محمّلة مسبقًا جوه index.html نفسه، فالسكريبتات (js/app.js,
+    js/themes.js) بتشتغل على النسخة اللي جوه index.html مباشرة.
+    لو حابب تحويل المشروع لتحميل الصفحات دي ديناميكيًا (fetch) بدل ما تكون
+    كلها متضمنة في index.html من البداية، ده تغيير معماري أكبر ومحتاج
+    تعديل ترتيب التحميل في js/app.js كمان - قولّي لو عايز أعمله كخطوة تانية.
+-->
+
+        <div id="chatScreen">
+
+            <!-- TOP APP BAR -->
+            <header class="top-app-bar glass-effect">
+                <div class="app-bar-left">
+                    <button class="app-bar-btn menu-btn" id="menuToggle" aria-label="القائمة">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <line x1="3" y1="6" x2="21" y2="6"/>
+                            <line x1="3" y1="12" x2="21" y2="12"/>
+                            <line x1="3" y1="18" x2="21" y2="18"/>
+                        </svg>
+                    </button>
+                    <div class="user-profile" id="userAvatarWrap">
+                        <div class="avatar-container" id="userAvatar">
+                            <div class="avatar-image">👥</div>
+                            <span class="online-indicator"></span>
+                        </div>
+                        <div class="user-info">
+                            <h3 id="currentUserDisplay">Tomodachi</h3>
+                            <div class="connection-status">
+                                <span class="status-dot"></span>
+                                <span id="onlineInfo">0 متصل</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="app-bar-center">
+                    <div class="search-bar">
+                        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="بحث..." />
+                        <button class="search-clear" id="searchClear">✕</button>
+                    </div>
+                </div>
+
+                <div class="app-bar-right">
+                    <button class="app-bar-btn logout-btn" id="logoutBtn" aria-label="خروج">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- MOBILE MENU -->
+            <nav class="mobile-menu" id="mobileMenu">
+                <div class="menu-header">
+                    <div class="menu-avatar" id="menuAvatar">👥</div>
+                    <div class="menu-user-info">
+                        <div class="menu-username" id="menuUsername">Tomodachi</div>
+                        <div class="menu-status">🟢 متصل</div>
+                    </div>
+                    <button class="menu-close" id="menuClose">✕</button>
+                </div>
+                <div class="menu-items">
+                    <div class="menu-item" onclick="openAvatarModal()">
+                        <i class="fas fa-user-edit"></i>
+                        <span>تعديل الملف الشخصي</span>
+                    </div>
+                    <div class="menu-item" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                        <span>الوضع الليلي</span>
+                    </div>
+                    <div class="menu-item" onclick="openThemeSettings()">
+                        <i class="fas fa-palette"></i>
+                        <span>إعدادات الثيم</span>
+                    </div>
+                    <div class="menu-divider"></div>
+                    <div class="menu-item admin-only" id="adminMenuItem" onclick="openAdminPanel()" style="display:none;">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>لوحة المسؤول</span>
+                    </div>
+                    <div class="menu-item" onclick="document.getElementById('logoutBtn').click()" style="color:#E74C3C;">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>تسجيل الخروج</span>
+                    </div>
+                </div>
+            </nav>
+            <div class="menu-overlay" id="menuOverlay"></div>
+
+            <!-- SEARCH RESULTS -->
+            <div id="searchResults"></div>
+
+            <!-- MESSAGES -->
+            <div id="messagesContainer"></div>
+
+            <!-- REACTION BAR -->
+            <div id="reactionBar">
+                <div class="reaction-items" id="reactionItems"></div>
+            </div>
+
+            <!-- TYPING INDICATOR -->
+            <div id="typingIndicator">
+                <span class="typing-dots"><span></span><span></span><span></span></span>
+                <span id="typingText"></span>
+            </div>
+
+            <!-- REPLY BAR -->
+            <div class="reply-bar" id="replyBar">
+                <div class="reply-avatar" id="replyAvatar">👤</div>
+                <span class="reply-text" id="replyText"><span class="reply-name">الرد على:</span> ...</span>
+                <button class="reply-cancel" id="replyCancel">✕</button>
+            </div>
+
+            <!-- INPUT -->
+            <div class="chat-input">
+                <div class="input-wrapper">
+                    <div class="input-row">
+                        <button class="input-action" id="emojiBtn">😊</button>
+                        <button class="input-action" id="stickerBtn">🎨</button>
+                        <button class="input-action" id="imageBtn">🖼️</button>
+                        <textarea id="messageInput" placeholder="اكتب رسالة..." maxlength="500" rows="1" enterkeyhint="enter"></textarea>
+                    </div>
+                </div>
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+
+            <!-- EMOJI PANEL -->
+            <div id="emojiPanel"></div>
+
+            <!-- STICKER PANEL -->
+            <div id="stickerPanel">
+                <div class="sticker-tabs" id="stickerTabs"></div>
+                <div class="sticker-grid" id="stickerGrid"></div>
+            </div>
+            <input type="file" id="stickerFileInput" accept="image/*" multiple style="display:none;" />
+            <input type="file" id="imageFileInput" accept="image/*" style="display:none;" />
+            <button id="scrollToBottom">⬇️</button>

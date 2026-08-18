@@ -1,0 +1,37 @@
+-e <!--
+    ملاحظة: هذا الملف نسخة مطابقة (مصدر مرجعي) لنفس الـ HTML المستخدم فعليًا
+    جوه index.html (السطور المقابلة). التطبيق حاليًا Single Page App وكل
+    الشاشات محمّلة مسبقًا جوه index.html نفسه، فالسكريبتات (js/app.js,
+    js/themes.js) بتشتغل على النسخة اللي جوه index.html مباشرة.
+    لو حابب تحويل المشروع لتحميل الصفحات دي ديناميكيًا (fetch) بدل ما تكون
+    كلها متضمنة في index.html من البداية، ده تغيير معماري أكبر ومحتاج
+    تعديل ترتيب التحميل في js/app.js كمان - قولّي لو عايز أعمله كخطوة تانية.
+-->
+
+        <div id="loginScreen">
+            <div class="login-premium-container">
+                <div class="login-brand-premium">
+                    <div class="login-icon-premium">👥</div>
+                    <h1>Tomodachi</h1>
+                    <p>友達 - أصدقاء للأبد</p>
+                </div>
+                <div class="login-card-premium">
+                    <div class="login-input-premium">
+                        <input type="text" id="usernameInput" placeholder="اسم المستخدم" maxlength="20" />
+                        <span class="login-input-icon">👤</span>
+                    </div>
+                    <div id="adminPassWrap" style="display:none;">
+                        <div class="login-input-premium">
+                            <input type="password" id="adminPasswordInput" placeholder="كلمة المرور" />
+                            <span class="login-input-icon">🔑</span>
+                        </div>
+                    </div>
+                    <button class="login-btn-premium" id="loginBtn">
+                        <span class="shimmer"></span>
+                        🚀 دخول
+                    </button>
+                    <button class="login-btn-premium-secondary" id="themeToggleLogin">🌓 تبديل الثيم</button>
+                    <div class="login-error-premium" id="loginError"></div>
+                </div>
+            </div>
+        </div>
