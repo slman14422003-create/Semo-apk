@@ -1,0 +1,22 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.Tomodachi" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_bg</item>
+        <item name="colorPrimaryDark">@color/brand_dark</item>
+        <item name="android:statusBarColor">@color/brand_dark</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:navigationBarColor">@color/brand_dark</item>
+    </style>
+
+    <!-- شاشة البدء الرسمية (Splash Screen API - androidx.core.splashscreen):
+         أيقونة متحركة سلسة في المنتصف على خلفية العلامة التجارية، بدل شاشة
+         ثابتة. تعمل بشكل موحّد على أندرويد 12+ وترجع لتصميم مكافئ بالإصدارات
+         الأقدم. -->
+    <style name="Theme.Tomodachi.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/brand_bg</item>
+        <item name="postSplashScreenTheme">@style/Theme.Tomodachi</item>
+    </style>
+
+</resources>
