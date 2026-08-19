@@ -234,6 +234,27 @@ public class MainActivity extends AppCompatActivity {
                 // Never silently trust bad certificates.
                 handler.cancel();
             }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                // بدون هذا، أي انهيار لعملية الرندر بالـ WebView (مثلاً نفاد
+                // الذاكرة أثناء معالجة صورة كبيرة على Canvas - بالضبط حالة
+                // تغيير صورة البروفايل/صورة الدردشة) كان يُسقط التطبيق كاملاً
+                // مباشرة دون أي فرصة للتعافي. الآن نتعامل معها: نزيل الـ
+                // WebView المعطوب ونعيد إنشاءه وتحميل الصفحة من جديد بدل كراش
+                // التطبيق بالكامل.
+                if (view != null) {
+                    rootView.removeView(view);
+                    view.destroy();
+                }
+                contentReady = false;
+                webView = new WebView(MainActivity.this);
+                rootView.addView(webView, 0, new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                setupWebView();
+                webView.loadUrl("https://" + ASSET_DOMAIN + "/assets/index.html");
+                return true; // لم نتعامل معها بالطريقة الافتراضية (كراش)، بل تعافينا بأنفسنا
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -379,13 +400,19 @@ public class MainActivity extends AppCompatActivity {
             // Fall back to gallery-only chooser if we can't create a temp file.
         }
         if (photoFile != null) {
-            cameraPhotoPath = photoFile.getAbsolutePath();
-            Uri photoUri = FileProvider.getUriForFile(this,
-                    getApplicationContext().getPackageName() + ".fileprovider", photoFile);
-            captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-            captureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            if (captureIntent.resolveActivity(getPackageManager()) != null) {
-                intents.add(captureIntent);
+            try {
+                cameraPhotoPath = photoFile.getAbsolutePath();
+                Uri photoUri = FileProvider.getUriForFile(this,
+                        getApplicationContext().getPackageName() + ".fileprovider", photoFile);
+                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                captureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                if (captureIntent.resolveActivity(getPackageManager()) != null) {
+                    intents.add(captureIntent);
+                }
+            } catch (Exception e) {
+                // لو فشل تجهيز رابط الكاميرا (مثلاً عدم تطابق إعدادات FileProvider)
+                // لا نُسقط التطبيق - فقط نتجاهل خيار الكاميرا ونكمل باختيار من المعرض.
+                cameraPhotoPath = null;
             }
         }
 
@@ -465,4 +492,4 @@ public class MainActivity extends AppCompatActivity {
         webView.destroy();
         super.onDestroy();
     }
-}
+                }
