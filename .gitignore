@@ -12,3 +12,11 @@ build/
 *.dex
 /app/build
 /app/release
+
+# مفتاح توقيع الـ release الحقيقي وكلمة مروره: لا يُرفعان لجيتهاب أبداً.
+# CI يعيد بناء ملف الـ keystore وقت التشغيل من GitHub Secret (راجع
+# .github/workflows/build-apk.yml). للبناء المحلي على جهازك، احتفظ بنسخة
+# app/tomodachi-release.keystore + app/keystore.properties خارج git.
+*.keystore
+*.jks
+keystore.properties
