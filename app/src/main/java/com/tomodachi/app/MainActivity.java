@@ -31,7 +31,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.WebViewAssetLoader;
 
@@ -61,7 +63,15 @@ public class MainActivity extends AppCompatActivity {
     public static final String NOTIF_CHANNEL_ID = "tomodachi_messages";
 
     private WebView webView;
+    private FrameLayout rootView;
     private boolean contentReady = false;
+    // آخر قيم insets حقيقية (بالبكسل CSS) تم حسابها فعلياً من نظام
+    // أندرويد - نحتفظ بها لإعادة حقنها بالصفحة عند كل تحميل/إعادة تحميل
+    // (مثلاً عند فتح التطبيق من الخلفية)، لأن env(safe-area-inset-*) وحدها
+    // غير موثوقة عبر كل الشركات المصنّعة (راجع setupNativeInsetsBridge).
+    private int lastSafeTopPx = 0;
+    private int lastSafeBottomPx = 0;
+    private int lastKeyboardPx = 0;
 
     private ValueCallback<Uri[]> filePathCallback;
     private String cameraPhotoPath;
@@ -104,10 +114,23 @@ public class MainActivity extends AppCompatActivity {
         applyStatusBarStyle(false); // أيقونات فاتحة مبدئياً (خلفية العلامة التجارية داكنة)
 
         FrameLayout root = new FrameLayout(this);
+        rootView = root;
         webView = new WebView(this);
         root.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+
+        // إصلاح "الشاشة/شريط الإرسال غير مضبوط" على بعض أجهزة/شركات معيّنة:
+        // env(safe-area-inset-*) وحدها بملف CSS غير كافية - كل شركة (هواوي/
+        // شاومي/سامسونج/أوبو...) تُعدّل نسخة WebView النظامية بجهازها بطريقة
+        // مختلفة، وبعضها لا يُبلّغ قيم safe-area الصحيحة لصفحة الويب إطلاقاً
+        // (تحديداً ارتفاع شريط التنقل السفلي بالأزرار الثلاثة، وارتفاع لوحة
+        // المفاتيح). الحل الموثوق: نقيس الـ insets الحقيقية من نظام أندرويد
+        // نفسه (WindowInsetsCompat - نفس المصدر اللي تعتمد عليه كل التطبيقات
+        // الأصلية) ونحقنها كمتغيرات CSS مباشرة بالصفحة، فتصير القيمة صحيحة
+        // ومضمونة على أي شركة أو حجم شاشة (هاتف أو تابلت) بدل الاعتماد على
+        // تطبيق WebView الجزئي/غير المتّسق لـ env().
+        setupNativeInsetsBridge(root);
 
         // ملاحظة مهمة (سبب مشكلة "كل ما مررت تحدث الصفحة"):
         // كان WebView ملفوفاً بـ SwipeRefreshLayout، وهو مكوّن أندرويد أصلي
@@ -200,6 +223,10 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 contentReady = true;
+                // الصفحة الجديدة (أول تحميل أو أي إعادة تحميل) تبدأ بدون
+                // متغيرات CSS المحقونة سابقاً - نعيد دفع آخر قيم insets
+                // معروفة فوراً حتى لا تظهر لحظة واحدة بواجهة غير مضبوطة.
+                pushInsetsToWebView(lastSafeTopPx, lastSafeBottomPx, lastKeyboardPx);
             }
 
             @Override
@@ -238,6 +265,47 @@ public class MainActivity extends AppCompatActivity {
         // (خارج Notification API القياسي بالمتصفح) مضمون الظهور طالما التطبيق
         // بالخلفية والعملية حيّة. راجع js/pwa.js -> notifyNewMessages().
         webView.addJavascriptInterface(new NativeBridge(), "AndroidBridge");
+    }
+
+    /**
+     * يقيس status bar / navigation bar / لوحة المفاتيح الحقيقية من نظام
+     * أندرويد نفسه (بدل الاعتماد فقط على env(safe-area-inset-*) داخل
+     * WebView غير الموثوقة عبر كل الشركات) ويحقنها كمتغيرات CSS بالصفحة،
+     * مع إعادة الحساب تلقائياً كل مرة تتغيّر فيها (فتح/غلق لوحة المفاتيح،
+     * تدوير الشاشة، تغيّر شريط التنقل). يعمل بنفس الطريقة على أي هاتف أو
+     * تابلت بغض النظر عن الشركة المصنّعة.
+     */
+    private void setupNativeInsetsBridge(FrameLayout root) {
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            androidx.core.graphics.Insets systemBars =
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            androidx.core.graphics.Insets ime =
+                    insets.getInsets(WindowInsetsCompat.Type.ime());
+            float density = getResources().getDisplayMetrics().density;
+
+            int safeTopPx = Math.round(systemBars.top / density);
+            int safeBottomPx = Math.round(systemBars.bottom / density);
+            // وقت ظهور لوحة المفاتيح، ارتفاعها عادة يشمل ارتفاع شريط
+            // التنقل السفلي أيضاً على أغلب الأجهزة - نستخدم الفرق فقط حتى
+            // لا يُضاف الارتفاعان فوق بعض (تباعد إضافي غير مرغوب).
+            int keyboardPx = Math.round(Math.max(0, ime.bottom - systemBars.bottom) / density);
+
+            lastSafeTopPx = safeTopPx;
+            lastSafeBottomPx = safeBottomPx;
+            lastKeyboardPx = keyboardPx;
+            pushInsetsToWebView(safeTopPx, safeBottomPx, keyboardPx);
+
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(root);
+    }
+
+    private void pushInsetsToWebView(int safeTopPx, int safeBottomPx, int keyboardPx) {
+        if (webView == null) return;
+        String js = "document.documentElement.style.setProperty('--native-safe-top','" + safeTopPx + "px');"
+                + "document.documentElement.style.setProperty('--native-safe-bottom','" + safeBottomPx + "px');"
+                + "document.documentElement.style.setProperty('--native-kb-inset','" + keyboardPx + "px');";
+        webView.evaluateJavascript(js, null);
     }
 
     /**
