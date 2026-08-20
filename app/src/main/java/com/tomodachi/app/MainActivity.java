@@ -354,6 +354,36 @@ public class MainActivity extends AppCompatActivity {
         public void setStatusBarStyle(boolean lightBackground) {
             runOnUiThread(() -> applyStatusBarStyle(lightBackground));
         }
+
+        // إصلاح: مصدر الحقيقة الوحيد لرقم/اسم إصدار التطبيق المثبَّت فعلياً -
+        // يُقرأ مباشرة من PackageManager (الذي يضبطه أندرويد تلقائياً حسب
+        // versionCode/versionName بملف build.gradle عند بناء أي APK) بدل رقم
+        // ثابت منسوخ يدوياً بملف app.js وقد يُنسى تحديثه. راجع js/app.js
+        // (syncAppVersionFromNativeBridge) لطريقة الاستخدام.
+        @android.webkit.JavascriptInterface
+        public long getAppVersionCode() {
+            try {
+                android.content.pm.PackageInfo info =
+                        getPackageManager().getPackageInfo(getPackageName(), 0);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    return info.getLongVersionCode();
+                }
+                return info.versionCode;
+            } catch (PackageManager.NameNotFoundException e) {
+                return -1;
+            }
+        }
+
+        @android.webkit.JavascriptInterface
+        public String getAppVersionName() {
+            try {
+                android.content.pm.PackageInfo info =
+                        getPackageManager().getPackageInfo(getPackageName(), 0);
+                return info.versionName;
+            } catch (PackageManager.NameNotFoundException e) {
+                return null;
+            }
+        }
     }
 
     private void postNotification(String title, String body) {
@@ -492,4 +522,4 @@ public class MainActivity extends AppCompatActivity {
         webView.destroy();
         super.onDestroy();
     }
-                }
+        }
