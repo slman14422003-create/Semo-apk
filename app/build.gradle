@@ -104,6 +104,11 @@ dependencies {
     implementation "androidx.compose.material:material-icons-extended"
     debugImplementation "androidx.compose.ui:ui-tooling"
 
+    // مطلوبة فقط لثيم شاشة البدء (themes.xml يرث من Theme.MaterialComponents
+    // لتفعيل edge-to-edge + windowSplashScreen بشكل صحيح) - الواجهة الفعلية
+    // كلها Compose، هذه المكتبة لا تُستخدم لأي View/XML آخر بالتطبيق.
+    implementation "com.google.android.material:material:1.12.0"
+
     // Firebase (Android SDK حقيقي بدل حزمة compat جافاسكربت عبر WebView)
     implementation platform("com.google.firebase:firebase-bom:33.4.0")
     implementation "com.google.firebase:firebase-firestore-ktx"
