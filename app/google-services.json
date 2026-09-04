@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "390244231579",
+    "project_id": "semo-chat-f5fdf",
+    "storage_bucket": "semo-chat-f5fdf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:390244231579:android:7dc8afe9791f4b5930993e",
+        "android_client_info": {
+          "package_name": "com.tomodachi.chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwlrCFhSN69IHa7988vH2VlZ3W9FXv38M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
