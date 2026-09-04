@@ -28,8 +28,28 @@ jobs:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
-            echo "⚠️ لم يُضبط السر GOOGLE_SERVICES_JSON_BASE64 — يُستخدم ملف تجريبي فقط للسماح بالبناء في CI."
-            cp app/google-services.json.template app/google-services.json
+            echo "⚠️ لم يُضبط السر GOOGLE_SERVICES_JSON_BASE64 — يُنشأ ملف تجريبي مباشرةً للسماح بالبناء في CI فقط."
+            cat > app/google-services.json << 'EOF'
+          {
+            "project_info": {
+              "project_number": "390244231579",
+              "project_id": "semo-chat-f5fdf",
+              "storage_bucket": "semo-chat-f5fdf.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:390244231579:android:0000000000000000000000",
+                  "android_client_info": { "package_name": "com.tomodachi.chat" }
+                },
+                "oauth_client": [],
+                "api_key": [ { "current_key": "AIzaSyDUMMYKEYFORCIBUILDONLY0000000" } ],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
           else
             echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > app/google-services.json
           fi
