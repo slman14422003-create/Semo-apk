@@ -1,80 +1,83 @@
-# Tomodachi — تطبيق Android (Kotlin WebView)
+# Semo — تطبيق دردشة Android (Kotlin أصلي + Jetpack Compose + Firebase)
 
-هذا مشروع Android Studio كامل بلغة **Kotlin** يحوّل تطبيق Tomodachi (الموجود أصلاً كـ PWA بـ HTML/CSS/JS + Firebase)
-إلى **APK حقيقي قابل للتثبيت**. كل إعدادات Firebase (المفتاح الثابت `apiKey`, `projectId`... إلخ)
-منسوخة كما هي بدون أي تعديل من `js/firebase.js` الأصلي — نفس المشروع، نفس القاعدة، بدون تغيير.
+تطبيق دردشة جماعية مباشرة، مكتوب بالكامل بلغة **Kotlin** باستخدام **Jetpack Compose**
+للواجهة و **Firebase (Auth + Firestore)** كقاعدة بيانات لحظية. لا يوجد أي WebView أو
+كود جافاسكربت داخل التطبيق — كل شيء (تسجيل الدخول، الرسائل، الردود، التفاعلات،
+الستيكرات، لوحة تحكم المسؤول، الثيمات) منطق Kotlin/Compose أصلي مباشر.
 
-الفكرة: `MainActivity.kt` يفتح WebView يعرض ملفات التطبيق (`app/src/main/assets/`) عبر نطاق
-افتراضي آمن (`https://appassets.androidplatform.net`) بدل `file://`، فتعمل كل مكتبات Firebase وخدمة
-الـ Service Worker تماماً كما تعمل على موقع حقيقي، مع دعم كامل لرفع الصور من الكاميرا/المعرض
-(لصفحة تعديل الأفاتار مثلاً) وصلاحيات وقت التشغيل.
+## ما الذي تغيّر في هذه المراجعة
 
-## أنا لا أستطيع رفعه لجيتهاب نيابةً عنك
+كانت شيفرة الواجهة (Kotlin/Compose) وملفات إعداد البناء (Gradle) في نسختين غير
+متطابقتين: الكود مكتوب بالكامل كتطبيق Compose/Firebase أصلي، لكن `app/build.gradle`
+كان لا يزال معدّاً لتطبيق WebView قديم (بلا أي اعتماديات Compose أو Firebase على
+الإطلاق) — أي أن **المشروع لم يكن قابلاً للبناء إطلاقاً** بصيغته السابقة. أهم الإصلاحات:
 
-ليس لدي اتصال إنترنت ولا صلاحيات دخول لحساب جيتهاب الخاص بك (ولا يجب أن يكون لأي أداة ذكاء
-اصطناعي ذلك). لكن الجزء الذي طلبته — أن يبني جيتهاب الـ APK تلقائياً ويجهزه كـ Release جاهز
-للتحميل بمجرد الرفع — **موجود بالكامل** في `.github/workflows/build-apk.yml`. أنت فقط تحتاج ترفع
-هذا المجلد لمرة واحدة.
+- إضافة كل اعتماديات Jetpack Compose (BOM، material3، material-icons-extended،
+  activity-compose، lifecycle-viewmodel-compose) وتفعيل `buildFeatures.compose`.
+- إضافة اعتماديات Firebase (BOM، Auth، Firestore) وربط بلجن `google-services`
+  (كان مفقوداً بالكامل من `build.gradle` الجذري رغم وجود `google-services.json`).
+- إضافة `kotlinx-coroutines-play-services` (مطلوبة لـ `.await()` المستخدَمة في
+  طبقة `ChatRepository`).
+- حذف مهمة `downloadVendorLibs` وقواعد `@JavascriptInterface` بـ ProGuard —
+  بقايا من نسخة WebView قديمة لم يعد لها أي استخدام (لا يوجد مجلد `assets/` أصلاً).
+- إصلاح لون نص فقاعة الرسالة ليتكيّف تلقائياً (أبيض/أسود) حسب سطوع لون الفقاعة
+  الفعلي بدل لون ثابت، حتى يبقى مقروءاً مهما كان اللون الذي يختاره المستخدم.
+- إصلاح أيقونة الرجوع بلوحة المسؤول لتنعكس صح مع اتجاه الواجهة العربي (RTL).
+- تفعيل شرائح "القفز السريع" بين تصنيفات الإيموجي (كانت بلا أي وظيفة).
+- تحديث الثيم العام (ألوان/خطوط/زوايا) وتصميم شاشتي الدخول والدردشة بشكل أكثر
+  اتساقاً وحداثة.
 
-## خطوات الرفع (دقيقتان)
+> ⚠️ **تنبيه أمان**: ملف `keystore.properties` المحلي (مستثنى من git عبر
+> `.gitignore`) يحتوي كلمة مرور keystore بنص صريح. يُنصح بشدة بتوليد keystore
+> جديد بكلمة مرور جديدة قبل أي استخدام فعلي/نشر، خاصة إن كانت هذه القيمة قد
+> ظهرت لأي طرف آخر من قبل.
+
+## البنية
+
+```
+Semo/
+├── app/src/main/java/com/tomodachi/app/
+│   ├── MainActivity.kt              ← نقطة البداية + التنقل بين الشاشات
+│   ├── MessageSyncService.kt        ← إشعارات الرسائل بالخلفية
+│   ├── NotifyHelper.kt              ← بناء الإشعارات
+│   ├── data/                        ← النماذج + طبقة Firestore (ChatRepository)
+│   └── ui/
+│       ├── theme/                   ← الثيم العام (Theme.kt)
+│       ├── components/              ← فقاعة الرسالة، لوحة الإيموجي، الملف الشخصي
+│       ├── screens/                 ← تسجيل الدخول، الدردشة، لوحة المسؤول
+│       └── viewmodel/                ← ChatViewModel (منطق الحالة الكامل)
+├── app/google-services.json         ← إعداد مشروع Firebase (semo-chat-f5fdf)
+└── .github/workflows/build-apk.yml  ← بناء تلقائي عبر GitHub Actions
+```
+
+## البناء محلياً
+
+افتح المجلد في Android Studio (Iguana أو أحدث) واختر Run. تأكد أولاً من:
+
+1. وجود `app/google-services.json` (موجود بالفعل بهذا المستودع).
+2. اتصال إنترنت لتنزيل اعتماديات Gradle (Compose BOM، Firebase BOM...) عند أول بناء.
+
+أو عبر الطرفية:
 
 ```bash
-cd Tomodachi-android          # هذا المجلد
+./gradlew assembleDebug
+```
+
+## البناء عبر GitHub Actions
+
+ورشة العمل `.github/workflows/build-apk.yml` تبني `debug` و`release` تلقائياً
+وتُنشئ Release جاهزاً بمجرد الدفع لفرع `main`، أو عند إنشاء Tag بصيغة `v1.0.0`.
+
+```bash
 git init
 git add .
-git commit -m "Initial Android (Kotlin) build of Tomodachi"
+git commit -m "Semo — Kotlin/Compose/Firebase chat app"
 git branch -M main
 git remote add origin https://github.com/USERNAME/REPO.git
 git push -u origin main
 ```
 
-بمجرد الرفع (push) لفرع `main`، ستجد في تبويب **Actions** بالمستودع أن ورشة العمل
-`Build Tomodachi APK` بدأت تلقائياً. عند اكتمالها (٥-٨ دقائق) اذهب لتبويب **Releases**
-بالمستودع — ستجد إصدار جديد جاهز يحتوي على:
-- `Tomodachi-debug.apk`
-- `Tomodachi-release.apk` (هذا هو المُوصى بتثبيته على الجهاز)
-
-كل عملية `push` جديدة لفرع `main`، أو كل مرة تنشئ فيها Tag بصيغة `v1.0.0` مثلاً
-(`git tag v1.0.0 && git push origin v1.0.0`)، تُنشئ Release جديد تلقائياً بنفس الطريقة.
-
 ## التثبيت على الهاتف
 
-نزّل `Tomodachi-release.apk` من صفحة Releases على هاتف Android، وفعّل خيار
-"تثبيت من مصادر غير معروفة" إذا طُلب منك ذلك، ثم افتح الملف للتثبيت.
-
-> ملاحظة: الـ APK موقّع حالياً بمفتاح تصحيح (debug key) الجاهز تلقائياً من أدوات جوجل — هذا
-> يجعله يعمل ويُثبّت فوراً بدون أي إعداد إضافي، لكنه غير صالح للنشر على متجر Google Play.
-> لو احتجت لاحقاً نشره على المتجر، تحتاج مفتاح توقيع release حقيقي (keystore) تحتفظ به سرياً
-> كـ GitHub Secret — أخبرني وأجهزه لك.
-
-## بنية المشروع
-
-```
-Tomodachi-android/
-├── app/
-│   ├── src/main/
-│   │   ├── java/com/tomodachi/app/MainActivity.kt      ← الكود الأساسي (Kotlin)
-│   │   ├── assets/                                     ← تطبيق الويب كاملاً (HTML/CSS/JS + Firebase)
-│   │   ├── res/                                        ← أيقونات، شاشة البداية، الألوان
-│   │   └── AndroidManifest.xml
-│   └── build.gradle
-├── .github/workflows/build-apk.yml   ← بناء الـ APK تلقائياً + إنشاء Release
-├── build.gradle
-└── settings.gradle
-```
-
-## ⚠️ مهم: مكتبات الطرف الثالث (Firebase SDK وغيرها)
-
-صفحة `assets/index.html` تحمّل Firebase SDK و dayjs و sweetalert2 و lodash و uuid من نسخة
-محلية داخل `assets/libs/` أولاً، وترجع لـ CDN خارجي فقط لو الملف المحلي غير موجود. سير عمل
-GitHub Actions (`.github/workflows/build-apk.yml`) يُنزّل هذه الملفات تلقائياً بخطوة
-"Fetch bundled vendor libraries" **قبل** كل بناء، لذا أي APK ناتج عن الرفع لجيتهاب يحتوي عليها
-مضمّنة فعلياً ولا يعتمد على الإنترنت وقت التشغيل. لو تبني الـ APK يدوياً محلياً (بدون CI)،
-تأكد من تشغيل نفس أوامر `curl` الموجودة بتلك الخطوة أولاً، وإلا سيعتمد التطبيق على الوصول
-لـ `gstatic.com`/`jsdelivr.net` من جهاز المستخدم نفسه، وأي شبكة بطيئة أو مقيّدة ستجعل شاشة
-التحميل تبدو عالقة لفترة طويلة أو تفشل تهيئة Firebase كلياً.
-
-## التطوير محلياً (اختياري)
-
-افتح المجلد مباشرة في Android Studio (Iguana أو أحدث) واختر Run — لست مضطراً لاستخدام
-جيتهاب إن كنت تريد تجربته على جهازك أو المحاكي مباشرة أولاً.
+نزّل `Semo-release.apk` من صفحة Releases، فعّل "تثبيت من مصادر غير معروفة" إذا
+طُلب منك ذلك، ثم افتح الملف للتثبيت.

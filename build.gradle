@@ -7,6 +7,11 @@ buildscript {
     dependencies {
         classpath "com.android.tools.build:gradle:8.7.3"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // لازم لقراءة app/google-services.json وتوليد إعدادات Firebase وقت
+        // البناء - كان مفقوداً تماماً رغم وجود الملف نفسه بالمشروع، فكان
+        // FirebaseApp.initializeApp() يفشل بصمت (أو يرمي استثناء) وقت تشغيل
+        // التطبيق لأن لا شيء يهيّئ Firebase فعلياً من هذا الملف.
+        classpath "com.google.gms:google-services:4.4.2"
     }
 }
 
