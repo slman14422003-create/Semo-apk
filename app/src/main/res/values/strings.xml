@@ -1,3 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Semo</string>
+    <string name="app_name">Tomodachi</string>
+
+    <string name="login_title">مرحباً بك في Tomodachi</string>
+    <string name="login_subtitle">أدخل اسم مستخدم للانضمام إلى الدردشة الجماعية</string>
+    <string name="login_username_hint">اسم المستخدم</string>
+    <string name="login_button">دخول</string>
+    <string name="login_banned_permanent">هذا الحساب محظور بشكل دائم.</string>
+    <string name="login_banned_temporary">هذا الحساب موقوف مؤقتاً. الوقت المتبقي: %1$s</string>
+    <string name="login_empty_username">الرجاء إدخال اسم مستخدم صالح</string>
+
+    <string name="chat_title">دردشة Tomodachi</string>
+    <string name="chat_input_hint">اكتب رسالة…</string>
+    <string name="chat_typing_one">%1$s يكتب الآن…</string>
+    <string name="chat_typing_many">عدة أشخاص يكتبون الآن…</string>
+    <string name="chat_edited_label">(معدَّل)</string>
+    <string name="chat_reply_to">رد على %1$s</string>
+    <string name="chat_message_deleted">تم حذف هذه الرسالة</string>
+    <string name="chat_retry">إعادة المحاولة</string>
+    <string name="chat_send_failed">فشل الإرسال</string>
+    <string name="chat_sticker_notification">أرسل ستيكر</string>
+
+    <string name="profile_title">ملفي الشخصي</string>
+    <string name="profile_bio_hint">نبذة عنك (60 حرفاً كحد أقصى)</string>
+    <string name="profile_dark_mode">الوضع الداكن</string>
+    <string name="profile_bubble_color">لون فقاعة الرسائل</string>
+    <string name="profile_logout">تسجيل الخروج</string>
+    <string name="profile_choose_avatar">اختر صورة رمزية</string>
+
+    <string name="admin_title">لوحة تحكم المسؤول</string>
+    <string name="admin_tab_users">المستخدمون</string>
+    <string name="admin_tab_words">الكلمات الممنوعة</string>
+    <string name="admin_tab_stickers">الستيكرات</string>
+    <string name="admin_tab_danger">منطقة الخطر</string>
+    <string name="admin_ban_permanent">حظر دائم</string>
+    <string name="admin_unban">فك الحظر</string>
+    <string name="admin_unban_temp">فك الحظر المؤقت</string>
+    <string name="admin_warn">إرسال تحذير</string>
+    <string name="admin_promote">ترقية إلى مسؤول</string>
+    <string name="admin_delete_user">حذف الحساب نهائياً</string>
+    <string name="admin_add_word">إضافة كلمة ممنوعة</string>
+    <string name="admin_delete_all_messages">حذف جميع الرسائل نهائياً</string>
+    <string name="admin_confirm_delete_all">هل أنت متأكد؟ سيتم حذف جميع رسائل الدردشة نهائياً ولا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="admin_confirm">تأكيد</string>
+    <string name="admin_cancel">إلغاء</string>
+
+    <string name="notification_channel_name">رسائل Tomodachi</string>
+    <string name="notification_channel_desc">إشعارات الرسائل الجديدة في الدردشة الجماعية</string>
 </resources>

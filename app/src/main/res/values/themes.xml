@@ -1,28 +1,9 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Tomodachi" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <style name="Theme.Tomodachi" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/brand_bg</item>
-        <item name="colorPrimaryDark">@color/brand_dark</item>
-        <!-- شريط الحالة/التنقل شفافان: المحتوى (الويب) يمتد تحتهما فعلياً
-             (edge-to-edge حقيقي) بدل شريط لون صلب منفصل عن الواجهة يبان
-             وكأنه "شريط متصفح". MainActivity يتحكم بلون أيقونات الشريط
-             (فاتحة/داكنة) حسب ثيم التطبيق الحالي وقت التشغيل. -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
-        <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    <style name="Theme.Tomodachi.Splash" parent="Theme.Tomodachi">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
     </style>
-
-    <!-- شاشة البدء الرسمية (Splash Screen API - androidx.core.splashscreen):
-         أيقونة متحركة سلسة في المنتصف على خلفية العلامة التجارية، بدل شاشة
-         ثابتة. تعمل بشكل موحّد على أندرويد 12+ وترجع لتصميم مكافئ بالإصدارات
-         الأقدم. -->
-    <style name="Theme.Tomodachi.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/brand_bg</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
-        <item name="windowSplashScreenIconBackgroundColor">@color/brand_bg</item>
-        <item name="postSplashScreenTheme">@style/Theme.Tomodachi</item>
-    </style>
-
 </resources>

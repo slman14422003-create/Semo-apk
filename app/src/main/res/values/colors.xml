@@ -1,5 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_bg">#1877F2</color>
-    <color name="brand_dark">#1a1a2e</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="tomodachi_primary">#FF6F61</color>
+    <color name="tomodachi_primary_dark">#C43E31</color>
+    <color name="tomodachi_secondary">#5DB7DE</color>
+    <color name="splash_background">#FF6F61</color>
 </resources>
