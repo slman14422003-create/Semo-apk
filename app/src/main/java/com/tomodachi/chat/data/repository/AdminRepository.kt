@@ -19,12 +19,23 @@ class AdminRepository {
     // --- المستخدمون ---
 
     fun observeUsers(): Flow<List<User>> = callbackFlow {
-        val registration = usersRef.addSnapshotListener { snapshot, _ ->
-            if (snapshot == null) return@addSnapshotListener
-            trySend(snapshot.documents.mapNotNull { it.toObject(User::class.java) })
+        val registration = usersRef.addSnapshotListener { snapshot, error ->
+            if (error != null || snapshot == null) {
+                // ما منكسر التطبيق على خطأ صلاحيات أو اتصال — منرجّع لائحة فاضية بدل ما نرمي استثناء
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+            // وثائق قديمة/تالفة (من نظام المصادقة السابق) ما لازم توقف كل اللائحة — نتجاهلها فقط
+            val safeUsers = snapshot.documents.mapNotNull { doc ->
+                runCatching { doc.toObject(User::class.java) }.getOrNull()
+            }
+            // نضمن مفاتيح فريدة بمنع تكرار usernameLower (وثائق ناقصة usernameLower="")
+            trySend(safeUsers.distinctBy { it.usernameLower.ifBlank { fallbackKey(it) } })
         }
         awaitClose { registration.remove() }
     }
+
+    private fun fallbackKey(user: User) = user.username.ifBlank { "unknown_${user.hashCode()}" }
 
     suspend fun banPermanently(usernameLower: String, reason: String) {
         usersRef.document(usernameLower).update(
@@ -38,7 +49,7 @@ class AdminRepository {
                 "isBannedPermanently" to false,
                 "bannedUntilMillis" to 0L,
                 "banReason" to "",
-                "violationsCount" to 0L
+                "warningsCount" to 0L
             )
         ).await()
     }
@@ -79,11 +90,15 @@ class AdminRepository {
     // --- الكلمات الممنوعة ---
 
     fun observeBannedWords(): Flow<List<BannedWord>> = callbackFlow {
-        val registration = bannedWordsRef.addSnapshotListener { snapshot, _ ->
-            if (snapshot == null) return@addSnapshotListener
-            trySend(snapshot.documents.mapNotNull { doc ->
-                doc.toObject(BannedWord::class.java)?.copy(id = doc.id)
-            })
+        val registration = bannedWordsRef.addSnapshotListener { snapshot, error ->
+            if (error != null || snapshot == null) {
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+            val safeWords = snapshot.documents.mapNotNull { doc ->
+                runCatching { doc.toObject(BannedWord::class.java)?.copy(id = doc.id) }.getOrNull()
+            }
+            trySend(safeWords)
         }
         awaitClose { registration.remove() }
     }
