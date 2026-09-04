@@ -1,1 +1,11 @@
-
+{
+  "name": "tomodachi-functions",
+  "description": "Cloud Functions لإرسال إشعارات Tomodachi عند وصول رسالة جديدة",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0"
+  },
+  "private": true
+}
