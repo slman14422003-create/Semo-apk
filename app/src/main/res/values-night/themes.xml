@@ -1,1 +1,8 @@
-
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Tomodachi" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.Tomodachi.Splash" parent="Theme.Tomodachi">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+    </style>
+</resources>
