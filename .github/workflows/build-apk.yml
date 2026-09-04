@@ -54,9 +54,12 @@ jobs:
       # هندسياً هو: نحاول تحميل كل ملف على حدة، ولو فشل أحدها نطبع تحذيراً
       # واضحاً ونكمل بدل إيقاف البناء بالكامل بسبب ملف اختياري واحد.
       - name: Fetch bundled vendor libraries (Firebase SDK, dayjs, sweetalert2, lodash, uuid)
-        working-directory: app/src/main/assets/libs
         run: |
-          mkdir -p dayjs/plugin
+          # ننشئ المجلد أولاً من جذر المستودع، لأن working-directory يفشل
+          # فوراً (قبل حتى تشغيل أي أمر) لو المجلد غير موجود مسبقاً بالمستودع
+          # المستنسخ (checkout) - وهذا بالضبط سبب فشل هذه الخطوة سابقاً.
+          mkdir -p app/src/main/assets/libs/dayjs/plugin
+          cd app/src/main/assets/libs
           fetched=0
           failed=0
 
