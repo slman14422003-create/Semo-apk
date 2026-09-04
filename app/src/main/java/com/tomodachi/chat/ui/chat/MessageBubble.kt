@@ -8,6 +8,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +36,7 @@ fun MessageBubble(
     onRetry: () -> Unit,
     onReact: (String) -> Unit
 ) {
-    var showActions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showActions by remember { mutableStateOf(false) }
     val bubbleColor = parseHexColor(message.bubbleColorHex)
     val textColor = readableTextColorFor(bubbleColor)
 
@@ -147,7 +151,7 @@ fun MessageBubble(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MessageActionsSheet(
     message: Message,
