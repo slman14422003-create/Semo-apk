@@ -61,10 +61,3 @@ jobs:
 
       - name: بناء APK تجريبي (debug)
         run: gradle assembleDebug
-
-      - name: رفع APK كـ Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tomodachi-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error

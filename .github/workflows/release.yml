@@ -11,8 +11,6 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: سحب الكود
@@ -53,16 +51,3 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleRelease
-
-      - name: تحديد اسم ملف APK الناتج
-        id: apk
-        run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: إنشاء GitHub Release ورفع APK
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "Tomodachi ${{ github.ref_name }}"
-          generate_release_notes: true
-          files: ${{ steps.apk.outputs.path }}
