@@ -5,6 +5,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -244,20 +244,12 @@ private fun AuthModeTab(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(bg)
-            .padding(vertical = 10.dp)
-            .then(Modifier.clickableNoRipple(onClick)),
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(text, color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
-}
-
-private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed {
-    androidx.compose.foundation.clickable(
-        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-        indication = null,
-        onClick = onClick
-    )
 }
 
 private fun friendlyErrorMessage(raw: String): String = when {
