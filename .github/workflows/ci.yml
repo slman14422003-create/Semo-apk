@@ -1,19 +1,20 @@
 name: CI/CD
 
-# - Push على main: يبني نسخة debug فقط (وينشر Firebase Functions إذا تغيّرت ملفاتها).
-# - دفع تاغ بصيغة v1.0.0: يبني نسخة release ويرفعها كـ GitHub Release.
+# كل حاجة بقت تلقائية بالكامل: كفاية إنك تعمل push على main وبس.
+# 1) build-debug: بناء + فحص Lint لنسخة تجريبية.
+# 2) build-and-release: بعد نجاح debug، بيبني نسخة release ويرفعها تلقائيًا
+#    كـ GitHub Release بتاغ يتولّد تلقائيًا (v1.0.<رقم التشغيلة>) — من غير أي أمر git tag يدوي.
+# 3) deploy-functions: بينشر Firebase Functions تلقائيًا لو فيه تغيير فعلي في ملفاتها.
 on:
   push:
     branches: [ "main" ]
-    tags: [ "v*.*.*" ]
   workflow_dispatch: {}
 
 jobs:
   # =========================================================
-  # 1) بناء نسخة تجريبية (debug) — يعمل فقط عند Push لفرع main
+  # 1) بناء نسخة تجريبية (debug)
   # =========================================================
   build-debug:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -69,11 +70,11 @@ jobs:
         run: gradle assembleDebug
 
   # =========================================================
-  # 2) بناء نسخة الإصدار (release) ورفعها كـ GitHub Release
-  #    يعمل فقط عند دفع تاغ بصيغة v1.0.0
+  # 2) بناء نسخة الإصدار (release) ورفعها كـ GitHub Release تلقائيًا
+  #    بعد نجاح build-debug مباشرة — بتاغ يتولّد تلقائيًا، من غير خطوة يدوية
   # =========================================================
   build-and-release:
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: build-debug
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -124,19 +125,23 @@ jobs:
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
+      - name: توليد رقم إصدار تلقائي
+        id: version
+        run: echo "tag=v1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
       - name: إنشاء GitHub Release ورفع APK
         uses: softprops/action-gh-release@v2
         with:
-          name: "Tomodachi ${{ github.ref_name }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Tomodachi ${{ steps.version.outputs.tag }}"
           generate_release_notes: true
           files: ${{ steps.apk.outputs.path }}
 
   # =========================================================
-  # 3) نشر Firebase Functions — يعمل فقط عند Push لفرع main
-  #    مع تغيّر ملفات functions/ أو firestore.rules أو firebase.json
+  # 3) نشر Firebase Functions تلقائيًا — فقط لو فيه تغيير فعلي
+  #    في ملفات functions/ أو firestore.rules أو firebase.json
   # =========================================================
   deploy-functions:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
