@@ -1,5 +1,6 @@
 package com.tomodachi.chat.ui.emoji
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -86,4 +87,4 @@ private fun CategoryTab(icon: String, label: String, selected: Boolean, onClick:
 }
 
 private fun Modifier.clickableEmoji(onClick: () -> Unit): Modifier =
-    this.then(androidx.compose.foundation.clickable(onClick = onClick))
+    this.clickable(onClick = onClick)
