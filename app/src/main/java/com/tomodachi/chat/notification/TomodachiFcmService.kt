@@ -1,8 +1,12 @@
 package com.tomodachi.chat.notification
 
+import android.Manifest
 import android.app.PendingIntent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.tomodachi.chat.MainActivity
@@ -51,8 +55,16 @@ class TomodachiFcmService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        NotificationManagerCompat.from(this).apply {
-            runCatching { notify(System.currentTimeMillis().toInt(), notification) }
+        val canNotify = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+        if (canNotify) {
+            NotificationManagerCompat.from(this).apply {
+                runCatching { notify(System.currentTimeMillis().toInt(), notification) }
+            }
         }
     }
 }
