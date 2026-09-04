@@ -1,4 +1,4 @@
-name: Build Semo APK
+name: Build Tomodachi APK
 
 on:
   push:
@@ -28,25 +28,81 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.7"
+          gradle-version: "8.9"
 
       # ================================================================
-      # لا حاجة بعد الآن لخطوة "تنزيل مكتبات الطرف الثالث" الموجودة
-      # بالنسخة القديمة (Firebase JS SDK, dayjs, sweetalert2...) لأن
-      # التطبيق أصبح Kotlin أصلي بالكامل: Firebase Firestore/Auth تُجلَب
-      # كمكتبات Gradle عادية من Maven مباشرة (راجع app/build.gradle)،
-      # ولا يوجد أي WebView أو ملف HTML/JS يحمّلها وقت التشغيل إطلاقاً.
+      # تنزيل مكتبات الطرف الثالث محلياً داخل الحزمة (assets/libs)
       # ================================================================
+      # السبب الحقيقي وراء "التطبيق يعلق عند شاشة التحميل" على كثير من
+      # الأجهزة: index.html يحاول تحميل Firebase SDK + dayjs + sweetalert2 +
+      # lodash + uuid من مجلد assets/libs/ المحلي أولاً (راجع __vendorLibs
+      # بملف index.html)، لكن هذه الملفات لم تكن موجودة فعلياً بالمستودع -
+      # فكل تثبيت للتطبيق كان يعتمد بالكامل على وصول فعلي لـ gstatic.com
+      # و jsdelivr.net وقت التشغيل، وأي شبكة مقيدة/بطيئة/محجوبة (شائع جداً
+      # لبعض الشركات ببعض الدول) تجعل تهيئة Firebase نفسها تفشل أو تتأخر
+      # لدرجة تبدو معها الشاشة "عالقة". الآن نُنزّل نفس النسخ المحدَّدة
+      # بالضبط بملف index.html أثناء البناء (لدى GitHub Actions اتصال
+      # إنترنت كامل)، فتُحزَم داخل كل APK من الآن فصاعداً وتعمل التهيئة
+      # فوراً من الملفات المحلية بلا أي اعتماد على الشبكة إطلاقاً.
+      #
+      # إصلاح مهم (كان يوقف البناء بالكامل): كانت هذه الخطوة تستخدم `set -e`
+      # مع curl -f، فأي رابط واحد يتعطل أو يتغير اسمه لاحقاً بأي CDN خارجي
+      # (خارج سيطرتنا كلياً - حصل فعلاً مع uuid) يوقف البناء بالكامل برمز
+      # خطأ 22، حتى لو باقي الملفات التسعة تحمّلت بنجاح. هذه الملفات كلها
+      # "تحسين اختياري" فقط - index.html نفسه أصلاً مصمم بمنطق fallback حي
+      # لـ CDN لو الملف المحلي غير موجود (راجع __loadScriptChain). فالصحيح
+      # هندسياً هو: نحاول تحميل كل ملف على حدة، ولو فشل أحدها نطبع تحذيراً
+      # واضحاً ونكمل بدل إيقاف البناء بالكامل بسبب ملف اختياري واحد.
+      - name: Fetch bundled vendor libraries (Firebase SDK, dayjs, sweetalert2, lodash, uuid)
+        working-directory: app/src/main/assets/libs
+        run: |
+          mkdir -p dayjs/plugin
+          fetched=0
+          failed=0
+
+          fetch_lib() {
+            local url="$1"
+            local out="$2"
+            if curl -fsSL --retry 2 --retry-delay 2 -o "$out" "$url"; then
+              echo "  ✅ $out"
+              fetched=$((fetched + 1))
+            else
+              echo "  ⚠️ فشل تحميل $out من $url (سيعتمد التطبيق على CDN وقت التشغيل بدلاً من الملف المحلي لهذه المكتبة فقط)"
+              rm -f "$out"
+              failed=$((failed + 1))
+            fi
+          }
+
+          fetch_lib "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"       "firebase-app-compat.js"
+          fetch_lib "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" "firebase-firestore-compat.js"
+          fetch_lib "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"   "firebase-storage-compat.js"
+          fetch_lib "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"      "firebase-auth-compat.js"
+          fetch_lib "https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"                          "dayjs/dayjs.min.js"
+          fetch_lib "https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/relativeTime.js"                "dayjs/plugin/relativeTime.js"
+          fetch_lib "https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/localizedFormat.js"             "dayjs/plugin/localizedFormat.js"
+          fetch_lib "https://cdn.jsdelivr.net/npm/sweetalert2@11"                            "sweetalert2.min.js"
+          fetch_lib "https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"              "lodash.min.js"
+          fetch_lib "https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/umd/uuidv4.min.js"          "uuid.min.js"
+
+          echo ""
+          echo "📦 تم تحميل $fetched من أصل 10 مكتبات محلياً بنجاح (فشل: $failed)"
+          if [ "$failed" -gt 0 ]; then
+            echo "⚠️ لن يوقف هذا البناء - التطبيق سيرجع تلقائياً لتحميل أي مكتبة فشلت من CDN وقت التشغيل"
+          fi
+          ls -la . dayjs dayjs/plugin
 
       # ================================================================
       # إعادة بناء مفتاح توقيع الـ release الحقيقي وقت التشغيل
       # ================================================================
-      # ملف *.keystore الحقيقي مستثنى عمداً من جيت (.gitignore) لأسباب
-      # أمنية. بدونه، سيوقّع Gradle كل إصدار "release" تلقائياً بمفتاح
-      # debug عشوائي مختلف بكل تشغيل CI → أندرويد يعتبرها تطبيقات مختلفة
-      # ويطلب إلغاء التثبيت القديم قبل أي تحديث. لذلك نعيد إنشاء نفس ملف
-      # الـ keystore الحقيقي من GitHub Secret (RELEASE_KEYSTORE_BASE64)
-      # بكل تشغيل، فيبقى نفس التوقيع ثابتاً بكل إصدار قادم.
+      # هذه الخطوة كانت موصوفة بتعليق .gitignore لكن غير مطبَّقة فعلياً -
+      # وهذا بالضبط سبب أن كل نسخة "release" كانت تُوقَّع تلقائياً بمفتاح
+      # debug عشوائي مختلف بكل تشغيل CI (لأن الملف *.keystore مستثنى من جيت
+      # عمداً ولا يوجد بديل يعيد إنشاءه). النتيجة: توقيع مختلف كل مرة →
+      # أندرويد يعتبرها تطبيقات مختلفة تماماً ويطلب إلغاء التثبيت القديم
+      # قبل أي تحديث، وأيضاً Play Protect يرفع درجة الخطورة لأي APK موقّع
+      # بمفتاح debug. الآن يُعاد إنشاء نفس ملف الـ keystore الحقيقي من
+      # GitHub Secret (RELEASE_KEYSTORE_BASE64) بكل تشغيل، فيبقى نفس
+      # التوقيع ثابتاً بكل إصدار قادم.
       - name: Restore release keystore
         working-directory: app
         env:
@@ -62,7 +118,7 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Build release APK
+      - name: Build release APK (debug-signed, installable)
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
@@ -70,20 +126,20 @@ jobs:
       - name: Rename APKs
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk out/Semo-debug.apk
-          cp app/build/outputs/apk/release/app-release.apk out/Semo-release.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/Tomodachi-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk out/Tomodachi-release.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Semo-APK
+          name: Tomodachi-APK
           path: out/*.apk
 
       - name: Create GitHub Release with APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
-          name: 'Semo ${{ startsWith(github.ref, ''refs/tags/'') && github.ref_name || format(''build #{0}'', github.run_number) }}'
+          name: 'Tomodachi ${{ startsWith(github.ref, ''refs/tags/'') && github.ref_name || format(''build #{0}'', github.run_number) }}'
           files: out/*.apk
           generate_release_notes: true
         env:
