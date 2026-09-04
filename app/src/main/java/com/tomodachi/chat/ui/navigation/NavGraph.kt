@@ -1,1 +1,100 @@
+package com.tomodachi.chat.ui.navigation
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.tomodachi.chat.data.repository.ServiceLocator
+import com.tomodachi.chat.ui.AppViewModel
+import com.tomodachi.chat.ui.admin.AdminScreen
+import com.tomodachi.chat.ui.auth.LoginScreen
+import com.tomodachi.chat.ui.chat.ChatScreen
+import com.tomodachi.chat.ui.profile.ProfileScreen
+import com.tomodachi.chat.ui.splash.SplashScreen
+import kotlinx.coroutines.launch
+
+@Composable
+fun TomodachiNavGraph(navController: NavHostController = rememberNavController()) {
+    val appViewModel: AppViewModel = viewModel()
+    val currentUser by appViewModel.currentUser.collectAsStateWithLifecycle()
+    val darkModePref by appViewModel.darkModePref.collectAsStateWithLifecycle()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val sessionManager = ServiceLocator.provideSessionManager(context)
+    val favoriteStickers by sessionManager.favoriteStickers.collectAsState(initial = emptySet())
+    val coroutineScope = rememberCoroutineScope()
+
+    NavHost(navController = navController, startDestination = Screen.Splash.route) {
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onFinished = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Login.route) {
+            LoginScreen(
+                onLoginSuccess = { user ->
+                    appViewModel.setCurrentUser(user)
+                    navController.navigate(Screen.Chat.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Chat.route) {
+            val user = currentUser
+            if (user != null) {
+                ChatScreen(
+                    currentUser = user,
+                    favoriteStickers = favoriteStickers,
+                    onToggleFavoriteSticker = { id ->
+                        coroutineScope.launch { sessionManager.toggleFavoriteSticker(id) }
+                    },
+                    onOpenProfile = { navController.navigate(Screen.Profile.route) },
+                    onOpenAdmin = { navController.navigate(Screen.Admin.route) }
+                )
+            }
+        }
+
+        composable(Screen.Profile.route) {
+            val user = currentUser
+            if (user != null) {
+                ProfileScreen(
+                    currentUser = user,
+                    darkModePref = darkModePref,
+                    onDarkModePrefChanged = { appViewModel.setDarkModePref(it) },
+                    onUserUpdated = { appViewModel.refreshCurrentUser() },
+                    onLogout = {
+                        appViewModel.logout {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable(Screen.Admin.route) {
+            val user = currentUser
+            if (user != null && user.isAdmin) {
+                AdminScreen(
+                    currentUser = user,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+    }
+}
