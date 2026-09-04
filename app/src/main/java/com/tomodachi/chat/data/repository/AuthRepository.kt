@@ -66,12 +66,16 @@ class AuthRepository(private val sessionManager: SessionManager) {
         validate(username, password, confirmPassword)?.let { return LoginResult.Error(it) }
         val usernameLower = username.lowercase()
         return try {
-            val docRef = usersRef.document(usernameLower)
-            if (docRef.get().await().exists()) {
-                return LoginResult.Error("username_taken")
-            }
+            // نصادق أولاً — قراءة/كتابة Firestore ممنوعة بقواعد الأمان قبل تسجيل الدخول
             val authResult = auth.createUserWithEmailAndPassword(emailFor(usernameLower), password).await()
             val uid = authResult.user?.uid ?: return LoginResult.Error("unknown")
+
+            val docRef = usersRef.document(usernameLower)
+            if (docRef.get().await().exists()) {
+                // اسم المستخدم محجوز فعلاً بـ Firestore رغم إنشاء حساب Auth جديد (حالة نادرة) — تراجع
+                auth.currentUser?.delete()?.await()
+                return LoginResult.Error("username_taken")
+            }
 
             val isInitialAdmin = usernameLower == User.INITIAL_ADMIN_USERNAME.lowercase()
             val newUser = User(
@@ -97,13 +101,15 @@ class AuthRepository(private val sessionManager: SessionManager) {
         validate(username, password)?.let { return LoginResult.Error(it) }
         val usernameLower = username.lowercase()
         return try {
+            // نصادق أولاً — قراءة Firestore ممنوعة بقواعد الأمان قبل تسجيل الدخول
+            val authResult = auth.signInWithEmailAndPassword(emailFor(usernameLower), password).await()
+            val uid = authResult.user?.uid ?: return LoginResult.Error("unknown")
+
             val docRef = usersRef.document(usernameLower)
             val existing = docRef.get().await()
             if (!existing.exists()) {
                 return LoginResult.Error("user_not_found")
             }
-            val authResult = auth.signInWithEmailAndPassword(emailFor(usernameLower), password).await()
-            val uid = authResult.user?.uid ?: return LoginResult.Error("unknown")
 
             val user = existing.toObject(User::class.java) ?: User()
             when {
