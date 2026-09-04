@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // ملاحظة: نظراً لأن معرّف وثيقة المستخدم هو اسم المستخدم (username) وليس uid،
+    // فإن التحقق الدقيق من الصلاحيات يتم فعلياً عبر مقارنة حقل uid المخزَّن داخل
+    // الوثيقة نفسها. هذه القواعد توفر حداً أدنى معقولاً من الحماية؛ يُنصح بمراجعتها
+    // وتخصيصها أكثر قبل الإطلاق الفعلي للإنتاج.
+    match /users/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.senderUid == request.auth.uid;
+      allow update, delete: if isSignedIn() &&
+        (resource.data.senderUid == request.auth.uid || isAdmin());
+    }
+
+    match /banned_words/{wordId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /stickers/{stickerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() &&
+        (resource.data.uploadedByUid == request.auth.uid || isAdmin());
+    }
+
+    match /typing_status/{username} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+  }
+}
