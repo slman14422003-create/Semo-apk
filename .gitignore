@@ -1,0 +1,19 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+
+# أسرار التوقيع — لا تُرفع إلى GitHub أبداً، تُحفظ فقط كـ GitHub Secrets
+*.keystore
+*.jks
+keystore.properties
+
+# ملفات Firebase المحلية (تُولَّد تلقائياً في CI من GOOGLE_SERVICES_JSON_BASE64)
+/app/google-services.json
