@@ -1,0 +1,34 @@
+name: Deploy Firebase Functions
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "functions/**"
+      - "firestore.rules"
+      - "firebase.json"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: سحب الكود
+        uses: actions/checkout@v4
+
+      - name: تثبيت Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: تثبيت الاعتماديات
+        working-directory: functions
+        run: npm install
+
+      - name: تثبيت Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: النشر إلى Firebase
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: firebase deploy --only functions,firestore:rules --project semo-chat-f5fdf --token "$FIREBASE_TOKEN" --non-interactive
