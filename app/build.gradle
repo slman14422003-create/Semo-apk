@@ -27,7 +27,9 @@ android {
 
     defaultConfig {
         applicationId "com.tomodachi.app"
-        minSdk 21
+        // firebase-auth-ktx 23.x يتطلب minSdk 23 على الأقل (كان 21 سابقاً
+        // فيفشل دمج AndroidManifest.xml وقت البناء).
+        minSdk 23
         targetSdk 35
         versionCode 1
         versionName "1.0.0"
