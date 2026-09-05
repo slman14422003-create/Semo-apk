@@ -53,8 +53,8 @@ android {
         getByName("debug") {
             storeFile = file("tomodachi-debug.keystore")
             storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            this.keyAlias = "androiddebugkey"
+            this.keyPassword = "android"
         }
     }
 
