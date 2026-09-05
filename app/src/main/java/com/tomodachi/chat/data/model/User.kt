@@ -17,6 +17,10 @@ data class User(
     val username: String = "",             // الاسم كما كتبه المستخدم
     val usernameLower: String = "",         // نسخة موحّدة صغيرة للبحث/المطابقة
     val avatarEmoji: String = "😀",
+    // صورة الملف الشخصي مخزَّنة كنص Base64 مباشرة داخل وثيقة المستخدم على Firestore
+    // (بدل رابط Firebase Storage) بناءً على طلب صريح، وتبقى فارغة إن لم يرفع
+    // المستخدم صورة بعد — عندها يُستخدم avatarEmoji كبديل دائماً.
+    val profileImageBase64: String = "",
     val bio: String = "",
     val bubbleColorHex: String = "#FF6F61",
 

@@ -17,6 +17,10 @@ data class Message(
     val id: String = "",
     val senderUid: String = "",
     val senderUsername: String = "",
+    // نسخة موحّدة صغيرة من اسم المرسل — تُستخدم في استعلامات الإدارة (مثل حذف
+    // كل رسائل مستخدم عند حذف حسابه) بدل senderUsername الذي يحتفظ بحالة الأحرف
+    // كما كتبها المستخدم أصلاً، فلا تتطابق مع usernameLower المخزَّن في وثيقة المستخدم.
+    val senderUsernameLower: String = "",
     val senderAvatarEmoji: String = "😀",
     val bubbleColorHex: String = "#FF6F61",
     val type: MessageType = MessageType.TEXT,
