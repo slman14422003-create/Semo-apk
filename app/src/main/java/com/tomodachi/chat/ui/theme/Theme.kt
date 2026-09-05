@@ -1,11 +1,15 @@
 package com.tomodachi.chat.ui.theme
 
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val LightColors = lightColorScheme(
     primary = IgBlue,
@@ -61,6 +65,22 @@ fun TomodachiTheme(
         else -> systemDark
     }
     val colors = if (useDark) DarkColors else LightColors
+
+    // يضبط لون أيقونات شريط الحالة/التنقل السفلي (فاتحة على خلفية داكنة، أو
+    // داكنة على خلفية فاتحة) في كل مرة يتغيّر فيها الوضع — سواء تلقائياً من
+    // النظام أو يدوياً من شاشة الملف الشخصي. هذا هو ما يجعل شريط الحالة
+    // متناسقاً بصرياً مع شريط التطبيق بدل أن يبقى بمظهر النظام الافتراضي.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                val insetsController = WindowCompat.getInsetsController(window, view)
+                insetsController.isAppearanceLightStatusBars = !useDark
+                insetsController.isAppearanceLightNavigationBars = !useDark
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = colors,
