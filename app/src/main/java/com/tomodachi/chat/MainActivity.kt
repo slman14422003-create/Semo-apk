@@ -5,8 +5,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -27,6 +29,22 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // يفعّل وضع Edge-to-Edge صراحة على كل إصدارات أندرويد المدعومة (وليس فقط
+        // أندرويد 15+ حيث يفرضه النظام تلقائياً) — بهذا يمتد محتوى شاشاتنا خلف
+        // شريط الحالة وشريط التنقل بشكل مقصود ومتحكَّم به، بدل أن يظهر شريط الحالة
+        // بخلفية النظام الافتراضية غير المتناسقة مع ألوان تطبيقنا. لون الأيقونات
+        // (فاتح/داكن) يُضبط لاحقاً بشكل تفاعلي داخل TomodachiTheme حسب وضع المظهر.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
