@@ -12,6 +12,16 @@ val GradientYellow = Color(0xFFFCAF45)
 val BrandGradient = listOf(GradientPurple, GradientPink, GradientOrange, GradientYellow)
 val BrandGradientSoft = listOf(GradientPurple, GradientRed, GradientOrange)
 
+// تدرّج مطابق للون أيقونة التطبيق الفعلية على الجهاز (أزرق فاتح ← نيلي غامق) —
+// مُستخرَج مباشرة من ألوان mipmap/ic_launcher_background_gen. يُستخدم حصرياً في
+// شاشتي السبلاش وتسجيل الدخول ليكون مظهرهما امتداداً بصرياً مباشراً لأيقونة
+// التطبيق كما يراها المستخدم على شاشته الرئيسية، بدل تدرّج انستقرام القديم.
+val IconBlueBright = Color(0xFF1877F2)
+val IconBlueMid = Color(0xFF3D5FE8)
+val IconBlueDeep = Color(0xFF5528E3)
+
+val BrandGradientBlue = listOf(IconBlueBright, IconBlueMid, IconBlueDeep)
+
 // أزرق الأزرار/الروابط بأسلوب انستقرام
 val IgBlue = Color(0xFF0095F6)
 val IgBlueDark = Color(0xFF4DABF7)
