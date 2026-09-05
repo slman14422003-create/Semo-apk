@@ -66,6 +66,7 @@ class ChatRepository(private val messageDao: MessageDao) {
             id = localId,
             senderUid = senderUid,
             senderUsername = senderUsername,
+            senderUsernameLower = senderUsernameLower,
             senderAvatarEmoji = senderAvatarEmoji,
             bubbleColorHex = bubbleColorHex,
             type = MessageType.TEXT,
@@ -102,6 +103,7 @@ class ChatRepository(private val messageDao: MessageDao) {
     suspend fun sendSticker(
         senderUid: String,
         senderUsername: String,
+        senderUsernameLower: String,
         senderAvatarEmoji: String,
         bubbleColorHex: String,
         stickerUrl: String,
@@ -112,6 +114,7 @@ class ChatRepository(private val messageDao: MessageDao) {
             id = localId,
             senderUid = senderUid,
             senderUsername = senderUsername,
+            senderUsernameLower = senderUsernameLower,
             senderAvatarEmoji = senderAvatarEmoji,
             bubbleColorHex = bubbleColorHex,
             type = MessageType.STICKER,

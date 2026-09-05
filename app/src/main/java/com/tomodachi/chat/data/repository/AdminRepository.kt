@@ -79,8 +79,11 @@ class AdminRepository {
     }
 
     suspend fun deleteUserAccount(usernameLower: String) {
-        // حذف كل رسائل المستخدم أولاً
-        val userMessages = messagesRef.whereEqualTo("senderUsername", usernameLower).get().await()
+        // حذف كل رسائل المستخدم أولاً — نستعلم بحقل senderUsernameLower (نسخة موحّدة
+        // بأحرف صغيرة) وليس senderUsername، لأن الأخير يحتفظ بحالة الأحرف كما كتبها
+        // المستخدم أصلاً ولن يطابق usernameLower أبداً إن كانت تحوي حرفاً كبيراً —
+        // ما كان يسبب بقاء رسائل المستخدم المحذوف في الدردشة الجماعية.
+        val userMessages = messagesRef.whereEqualTo("senderUsernameLower", usernameLower).get().await()
         val batch = firestore.batch()
         userMessages.documents.forEach { batch.delete(it.reference) }
         batch.delete(usersRef.document(usernameLower))
