@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit
 
 sealed class LoginUiState {
     data object Idle : LoginUiState()
-    data object CheckingSession : LoginUiState()
     data object Loading : LoginUiState()
     data class Error(val message: String) : LoginUiState()
     data class Success(val user: User) : LoginUiState()
@@ -25,20 +24,16 @@ enum class AuthMode { LOGIN, REGISTER }
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
+    // ملاحظة: التحقق من الجلسة السابقة (تسجيل الدخول التلقائي) أصبح مسؤولية
+    // SplashScreen/SplashViewModel وحدهما — يُنفَّذ مرة واحدة فقط قبل الوصول
+    // لهذه الشاشة أصلاً؛ لذا لا داعي لتكراره هنا ولا لحالة "CheckingSession".
     private val authRepository: AuthRepository = ServiceLocator.provideAuthRepository(application)
 
-    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.CheckingSession)
+    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     private val _mode = MutableStateFlow(AuthMode.LOGIN)
     val mode: StateFlow<AuthMode> = _mode.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            val user = authRepository.tryAutoLogin()
-            _uiState.value = if (user != null) LoginUiState.Success(user) else LoginUiState.Idle
-        }
-    }
 
     fun setMode(newMode: AuthMode) {
         _mode.value = newMode
