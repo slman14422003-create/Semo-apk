@@ -1,5 +1,9 @@
 package com.tomodachi.chat.ui.chat
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,13 +15,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -26,12 +34,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
+import com.tomodachi.chat.ui.components.UserAvatar
 import com.tomodachi.chat.ui.emoji.EmojiPickerSheet
 import com.tomodachi.chat.ui.stickers.StickerPickerSheet
 import com.tomodachi.chat.ui.theme.BrandGradient
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ChatScreen(
     currentUser: User,
@@ -79,87 +88,121 @@ fun ChatScreen(
         topBar = {
             Column(
                 modifier = Modifier
+                    .shadow(elevation = 3.dp)
                     .background(MaterialTheme.colorScheme.surface)
                     .fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(BrandGradient))
-                            .clickable(onClick = onOpenProfile),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(currentUser.avatarEmoji, fontSize = 18.sp)
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    UserAvatar(
+                        avatarEmoji = currentUser.avatarEmoji,
+                        profileImageBase64 = currentUser.profileImageBase64,
+                        size = 42.dp,
+                        showGradientRing = true,
+                        isOnline = currentUser.isOnline,
+                        onClick = onOpenProfile
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
                         Text(
                             "Tomodachi",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            "الدردشة الجماعية",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        AnimatedContent(targetState = typingUsers.isNotEmpty(), label = "subtitle") { isTyping ->
+                            if (isTyping) {
+                                TypingIndicator(typingUsers)
+                            } else {
+                                Text(
+                                    "الدردشة الجماعية",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                     if (currentUser.isAdmin) {
-                        IconButton(onClick = onOpenAdmin) {
-                            Icon(
-                                Icons.Filled.AdminPanelSettings,
-                                contentDescription = "لوحة التحكم",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            IconButton(onClick = onOpenAdmin) {
+                                Icon(
+                                    Icons.Filled.AdminPanelSettings,
+                                    contentDescription = "لوحة التحكم",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.6.dp)
-                TypingIndicator(typingUsers)
+                // خط تدرّج رفيع بأسلوب انستقرام بدل الفاصل الرمادي التقليدي
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(Brush.horizontalGradient(BrandGradient))
+                )
             }
         },
         bottomBar = {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
+                    .shadow(elevation = 6.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
             ) {
                 val activePreview = editingMessage ?: replyTarget
-                if (activePreview != null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                if (editingMessage != null) "تعديل رسالتك" else "رد على ${activePreview.senderUsername}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
+                AnimatedVisibility(visible = activePreview != null) {
+                    if (activePreview != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(32.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Brush.verticalGradient(BrandGradient))
                             )
-                            Text(
-                                activePreview.text.ifBlank { "🖼️ ستيكر" },
-                                maxLines = 1,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            Spacer(Modifier.width(10.dp))
+                            Icon(
+                                if (editingMessage != null) Icons.Filled.EditNote else Icons.Filled.Reply,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
                             )
-                        }
-                        IconButton(onClick = {
-                            if (editingMessage != null) { viewModel.cancelEditing(); inputText = "" }
-                            else viewModel.setReplyTarget(null)
-                        }) {
-                            Icon(Icons.Filled.Close, contentDescription = "إلغاء", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(6.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    if (editingMessage != null) "تعديل رسالتك" else "رد على ${activePreview.senderUsername}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    activePreview.text.ifBlank { "🖼️ ستيكر" },
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(onClick = {
+                                if (editingMessage != null) { viewModel.cancelEditing(); inputText = "" }
+                                else viewModel.setReplyTarget(null)
+                            }) {
+                                Icon(Icons.Filled.Close, contentDescription = "إلغاء", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                 }
@@ -168,9 +211,9 @@ fun ChatScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    IconButton(onClick = { showStickerSheet = true }, modifier = Modifier.size(38.dp)) {
+                    IconButton(onClick = { showStickerSheet = true }, modifier = Modifier.size(40.dp)) {
                         Text("🖼️", fontSize = 20.sp)
                     }
                     Spacer(Modifier.width(2.dp))
@@ -202,8 +245,7 @@ fun ChatScreen(
                                 unfocusedContainerColor = Color.Transparent,
                                 disabledContainerColor = Color.Transparent,
                                 focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent
+                                unfocusedIndicatorColor = Color.Transparent
                             ),
                             modifier = Modifier.weight(1f),
                             maxLines = 4
@@ -213,9 +255,12 @@ fun ChatScreen(
                     Spacer(Modifier.width(8.dp))
 
                     val canSend = inputText.isNotBlank()
+                    val sendScale by animateFloatAsState(if (canSend) 1f else 0.92f, label = "send_scale")
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(42.dp)
+                            .scale(sendScale)
+                            .shadow(if (canSend) 4.dp else 0.dp, CircleShape)
                             .clip(CircleShape)
                             .background(
                                 if (canSend) Brush.linearGradient(BrandGradient)
@@ -238,27 +283,39 @@ fun ChatScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            state = listState,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    )
+                )
                 .padding(padding)
         ) {
-            items(messages, key = { it.id }) { message ->
-                MessageBubble(
-                    message = message,
-                    isMine = message.senderUid == currentUser.uid,
-                    isAdmin = currentUser.isAdmin,
-                    onReply = { viewModel.setReplyTarget(message) },
-                    onEdit = { viewModel.startEditing(message) },
-                    onDelete = { viewModel.deleteMessage(message) },
-                    onRetry = { viewModel.retrySend(message) },
-                    onReact = { emoji ->
-                        viewModel.toggleReaction(message, emoji)
-                        recentEmojis = (listOf(emoji) + recentEmojis).distinct().take(30)
-                    }
-                )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 6.dp)
+            ) {
+                items(messages, key = { it.id }) { message ->
+                    MessageBubble(
+                        message = message,
+                        isMine = message.senderUid == currentUser.uid,
+                        isAdmin = currentUser.isAdmin,
+                        onReply = { viewModel.setReplyTarget(message) },
+                        onEdit = { viewModel.startEditing(message) },
+                        onDelete = { viewModel.deleteMessage(message) },
+                        onRetry = { viewModel.retrySend(message) },
+                        onReact = { emoji ->
+                            viewModel.toggleReaction(message, emoji)
+                            recentEmojis = (listOf(emoji) + recentEmojis).distinct().take(30)
+                        }
+                    )
+                }
             }
         }
     }

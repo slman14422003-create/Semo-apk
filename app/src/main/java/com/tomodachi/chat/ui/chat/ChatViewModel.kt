@@ -130,6 +130,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             chatRepository.sendSticker(
                 senderUid = user.uid,
                 senderUsername = user.username,
+                senderUsernameLower = user.usernameLower,
                 senderAvatarEmoji = user.avatarEmoji,
                 bubbleColorHex = user.bubbleColorHex,
                 stickerUrl = sticker.imageUrl,
