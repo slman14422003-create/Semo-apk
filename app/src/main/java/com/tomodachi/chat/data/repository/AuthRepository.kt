@@ -42,22 +42,31 @@ class AuthRepository(private val sessionManager: SessionManager) {
         }
     }
 
-    /** يحاول استرجاع الجلسة الحالية دون الحاجة لإعادة إدخال كلمة السر. */
+    /** يحاول استرجاع الجلسة الحالية دون الحاجة لإعادة إدخال كلمة السر.
+     *  يعتمد أولاً على Firestore للحصول على أحدث بيانات، لكنه لا يفرض شاشة
+     *  الدخول من جديد لمجرد بطء/انقطاع الشبكة لحظياً عند إقلاع التطبيق —
+     *  في هذه الحالة يستخدم آخر نسخة محفوظة محلياً من ملف المستخدم. */
     suspend fun tryAutoLogin(): User? {
         val firebaseUser = auth.currentUser ?: return null
+        val usernameLower = sessionManager.rememberedUsername.first()?.lowercase() ?: return null
         return try {
-            val usernameLower = sessionManager.rememberedUsername.first()?.lowercase() ?: return null
             val snapshot = usersRef.document(usernameLower).get().await()
             if (!snapshot.exists()) return null
             val user = snapshot.toObject(User::class.java) ?: return null
             if (user.isBanned) return null
             if (user.uid != firebaseUser.uid) return null
-            usersRef.document(usernameLower).update(
-                mapOf("isOnline" to true, "lastSeenMillis" to System.currentTimeMillis())
-            ).await()
-            user.copy(isOnline = true)
+            runCatching {
+                usersRef.document(usernameLower).update(
+                    mapOf("isOnline" to true, "lastSeenMillis" to System.currentTimeMillis())
+                ).await()
+            }
+            val loggedInUser = user.copy(isOnline = true)
+            sessionManager.cacheUserProfile(loggedInUser)
+            loggedInUser
         } catch (e: Exception) {
-            null
+            // تعذّر الوصول لـ Firestore (شبكة بطيئة/منقطعة عند الإقلاع) — نستخدم آخر
+            // نسخة محفوظة محلياً بدل إجبار المستخدم على تسجيل الدخول من جديد.
+            sessionManager.readCachedUserProfile(usernameLower)
         }
     }
 
@@ -88,6 +97,7 @@ class AuthRepository(private val sessionManager: SessionManager) {
             )
             docRef.set(newUser).await()
             sessionManager.rememberUsername(username)
+            sessionManager.cacheUserProfile(newUser)
             LoginResult.Success(newUser)
         } catch (e: FirebaseAuthException) {
             LoginResult.Error(mapAuthError(e))
@@ -124,7 +134,9 @@ class AuthRepository(private val sessionManager: SessionManager) {
                         )
                     ).await()
                     sessionManager.rememberUsername(username)
-                    LoginResult.Success(user.copy(uid = uid, isOnline = true))
+                    val loggedInUser = user.copy(uid = uid, isOnline = true)
+                    sessionManager.cacheUserProfile(loggedInUser)
+                    LoginResult.Success(loggedInUser)
                 }
             }
         } catch (e: FirebaseAuthException) {
