@@ -184,8 +184,12 @@ fun LoginScreen(
                     .height(50.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        if (isLoading) MaterialTheme.colorScheme.surfaceVariant
-                        else Brush.horizontalGradient(BrandGradient)
+                        brush = if (isLoading) {
+                            val disabled = MaterialTheme.colorScheme.surfaceVariant
+                            Brush.horizontalGradient(listOf(disabled, disabled))
+                        } else {
+                            Brush.horizontalGradient(BrandGradient)
+                        }
                     )
                     .clickable(enabled = !isLoading) {
                         if (mode == AuthMode.LOGIN) viewModel.login(username, password)
