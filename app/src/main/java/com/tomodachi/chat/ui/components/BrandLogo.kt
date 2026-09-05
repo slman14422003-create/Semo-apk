@@ -45,7 +45,7 @@ fun BrandMark(
  */
 @Composable
 fun BrandWordmark(
-    text: String = "Semo",
+    text: String = "Tomodachi",
     fontSize: androidx.compose.ui.unit.TextUnit = 34.sp,
     modifier: Modifier = Modifier
 ) {
