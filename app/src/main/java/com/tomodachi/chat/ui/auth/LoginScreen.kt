@@ -7,9 +7,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -32,6 +33,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
+import com.tomodachi.chat.ui.components.BrandMark
+import com.tomodachi.chat.ui.components.BrandWordmark
+import com.tomodachi.chat.ui.theme.BrandGradient
+import com.tomodachi.chat.ui.theme.GradientRed
 
 @Composable
 fun LoginScreen(
@@ -55,180 +60,201 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
-                )
-            ),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
         if (uiState is LoginUiState.CheckingSession) {
-            CircularProgressIndicator(color = Color.White)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             return@Box
         }
 
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("🎌", fontSize = 52.sp)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Tomodachi",
-                color = Color.White,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(28.dp))
+            BrandMark(size = 72.dp)
+            Spacer(Modifier.height(14.dp))
+            BrandWordmark(fontSize = 30.sp)
+            Spacer(Modifier.height(8.dp))
             Text(
                 if (mode == AuthMode.LOGIN) "سجّل الدخول للانضمام إلى الدردشة الجماعية"
                 else "أنشئ حسابك للانضمام إلى الدردشة الجماعية",
-                color = Color.White.copy(alpha = 0.9f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
 
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                modifier = Modifier.fillMaxWidth()
+            // مبدّل تسجيل الدخول / إنشاء حساب — شكل شرائح بأسلوب انستقرام
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp)
             ) {
-                Column(modifier = Modifier.padding(22.dp)) {
+                AuthModeTab(
+                    text = "تسجيل الدخول",
+                    selected = mode == AuthMode.LOGIN,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    viewModel.setMode(AuthMode.LOGIN)
+                    confirmPassword = ""
+                }
+                AuthModeTab(
+                    text = "إنشاء حساب",
+                    selected = mode == AuthMode.REGISTER,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    viewModel.setMode(AuthMode.REGISTER)
+                }
+            }
 
-                    // مبدّل تسجيل الدخول / إنشاء حساب
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(4.dp)
-                    ) {
-                        AuthModeTab(
-                            text = "تسجيل الدخول",
-                            selected = mode == AuthMode.LOGIN,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            viewModel.setMode(AuthMode.LOGIN)
-                            confirmPassword = ""
-                        }
-                        AuthModeTab(
-                            text = "إنشاء حساب",
-                            selected = mode == AuthMode.REGISTER,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            viewModel.setMode(AuthMode.REGISTER)
-                        }
-                    }
+            Spacer(Modifier.height(22.dp))
 
-                    Spacer(Modifier.height(20.dp))
+            LoginField(
+                value = username,
+                onValueChange = { username = it; viewModel.resetError() },
+                placeholder = "اسم المستخدم",
+                leadingIcon = Icons.Filled.Person
+            )
 
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it; viewModel.resetError() },
-                        label = { Text("اسم المستخدم") },
-                        leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            Spacer(Modifier.height(12.dp))
 
-                    Spacer(Modifier.height(14.dp))
+            LoginField(
+                value = password,
+                onValueChange = { password = it; viewModel.resetError() },
+                placeholder = "كلمة السر",
+                leadingIcon = Icons.Filled.Lock,
+                isPassword = true,
+                passwordVisible = passwordVisible,
+                onTogglePasswordVisibility = { passwordVisible = !passwordVisible }
+            )
 
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it; viewModel.resetError() },
-                        label = { Text("كلمة السر") },
-                        leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    AnimatedContent(
-                        targetState = mode == AuthMode.REGISTER,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "confirmPasswordField"
-                    ) { showConfirm ->
-                        if (showConfirm) {
-                            Column {
-                                Spacer(Modifier.height(14.dp))
-                                OutlinedTextField(
-                                    value = confirmPassword,
-                                    onValueChange = { confirmPassword = it; viewModel.resetError() },
-                                    label = { Text("تأكيد كلمة السر") },
-                                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
-                                    trailingIcon = {
-                                        IconButton(onClick = { confirmVisible = !confirmVisible }) {
-                                            Icon(
-                                                if (confirmVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                                contentDescription = null
-                                            )
-                                        }
-                                    },
-                                    visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(14.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
-                    }
-
-                    val errorMessage = (uiState as? LoginUiState.Error)?.message
-                    if (errorMessage != null) {
-                        Spacer(Modifier.height(10.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.errorContainer)
-                                .padding(10.dp)
-                        ) {
-                            Text(
-                                text = friendlyErrorMessage(errorMessage),
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(18.dp))
-                    Button(
-                        onClick = {
-                            if (mode == AuthMode.LOGIN) viewModel.login(username, password)
-                            else viewModel.register(username, password, confirmPassword)
-                        },
-                        enabled = uiState !is LoginUiState.Loading,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        if (uiState is LoginUiState.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text(if (mode == AuthMode.LOGIN) "دخول" else "إنشاء الحساب")
-                        }
+            AnimatedContent(
+                targetState = mode == AuthMode.REGISTER,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "confirmPasswordField"
+            ) { showConfirm ->
+                if (showConfirm) {
+                    Column {
+                        Spacer(Modifier.height(12.dp))
+                        LoginField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it; viewModel.resetError() },
+                            placeholder = "تأكيد كلمة السر",
+                            leadingIcon = Icons.Filled.Lock,
+                            isPassword = true,
+                            passwordVisible = confirmVisible,
+                            onTogglePasswordVisibility = { confirmVisible = !confirmVisible }
+                        )
                     }
                 }
             }
+
+            val errorMessage = (uiState as? LoginUiState.Error)?.message
+            if (errorMessage != null) {
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = friendlyErrorMessage(errorMessage),
+                        color = GradientRed,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            val isLoading = uiState is LoginUiState.Loading
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (isLoading) MaterialTheme.colorScheme.surfaceVariant
+                        else Brush.horizontalGradient(BrandGradient)
+                    )
+                    .clickable(enabled = !isLoading) {
+                        if (mode == AuthMode.LOGIN) viewModel.login(username, password)
+                        else viewModel.register(username, password, confirmPassword)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        if (mode == AuthMode.LOGIN) "دخول" else "إنشاء الحساب",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LoginField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    isPassword: Boolean = false,
+    passwordVisible: Boolean = false,
+    onTogglePasswordVisibility: (() -> Unit)? = null
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        leadingIcon = { Icon(leadingIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        trailingIcon = if (isPassword && onTogglePasswordVisibility != null) {
+            {
+                IconButton(onClick = onTogglePasswordVisibility) {
+                    Icon(
+                        if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else null,
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = if (isPassword) KeyboardOptions(keyboardType = KeyboardType.Password) else KeyboardOptions.Default,
+        singleLine = true,
+        shape = RoundedCornerShape(14.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent
+        ),
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -238,8 +264,8 @@ private fun AuthModeTab(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
-    val fg = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    val bg = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent
+    val fg = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
@@ -248,7 +274,7 @@ private fun AuthModeTab(
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(text, color = fg, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
     }
 }
 
