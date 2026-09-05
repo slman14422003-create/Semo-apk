@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
@@ -30,7 +32,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
@@ -88,9 +89,10 @@ fun ChatScreen(
         topBar = {
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .shadow(elevation = 3.dp)
                     .background(MaterialTheme.colorScheme.surface)
-                    .fillMaxWidth()
+                    .statusBarsPadding()
             ) {
                 Row(
                     modifier = Modifier
@@ -154,11 +156,23 @@ fun ChatScreen(
         bottomBar = {
             Column(
                 modifier = Modifier
-                    .shadow(elevation = 6.dp)
+                    .shadow(elevation = 8.dp)
                     .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                     .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .navigationBarsPadding()
+                    .imePadding()
             ) {
                 val activePreview = editingMessage ?: replyTarget
+                if (activePreview == null) {
+                    // خط تدرّج رفيع أعلى الشريط السفلي أيضاً، ليطابق الخط أعلى شريط
+                    // الدردشة ويعطي إحساساً موحّداً بهوية العلامة من أعلى الشاشة لأسفلها.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .background(Brush.horizontalGradient(BrandGradient))
+                    )
+                }
                 AnimatedVisibility(visible = activePreview != null) {
                     if (activePreview != null) {
                         Row(
@@ -214,15 +228,22 @@ fun ChatScreen(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     IconButton(onClick = { showStickerSheet = true }, modifier = Modifier.size(40.dp)) {
-                        Text("🖼️", fontSize = 20.sp)
+                        Icon(
+                            Icons.Filled.Image,
+                            contentDescription = "الستيكرات",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                     Spacer(Modifier.width(2.dp))
 
                     Row(
                         modifier = Modifier
                             .weight(1f)
+                            .heightIn(min = 44.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
