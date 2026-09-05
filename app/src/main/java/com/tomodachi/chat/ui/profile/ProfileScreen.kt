@@ -1,5 +1,7 @@
 package com.tomodachi.chat.ui.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,20 +15,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
+import com.tomodachi.chat.ui.components.UserAvatar
 import com.tomodachi.chat.ui.theme.BrandGradient
+import com.tomodachi.chat.ui.theme.WhatsAppGreen
 import com.tomodachi.chat.util.AVATAR_EMOJI_CHOICES
 import com.tomodachi.chat.util.BUBBLE_COLOR_PALETTE
 import com.tomodachi.chat.util.parseHexColor
@@ -44,15 +55,36 @@ fun ProfileScreen(
 ) {
     var bio by remember { mutableStateOf(currentUser.bio) }
     var showAvatarPicker by remember { mutableStateOf(false) }
+    var showAvatarSourceSheet by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
+
+    val isUploadingImage by viewModel.isUploadingImage.collectAsStateWithLifecycle()
+    val imageError by viewModel.imageError.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.updateProfileImage(currentUser.usernameLower, uri, onUserUpdated)
+        }
+    }
+
+    LaunchedEffect(imageError) {
+        imageError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeImageError()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        currentUser.username,
+                        "ملفي الشخصي",
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -63,7 +95,7 @@ fun ProfileScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent
                 )
             )
         }
@@ -75,162 +107,249 @@ fun ProfileScreen(
                 .padding(padding)
                 .verticalScroll(scrollState)
         ) {
-            Spacer(Modifier.height(24.dp))
-
-            // صورة رمزية بحلقة تدرّج بأسلوب "قصص" انستقرام
+            // --- رأس الملف الشخصي: شعاع تدرّج علوي بأسلوب غلاف انستقرام/واتساب ---
             Box(
                 modifier = Modifier
-                    .size(96.dp)
-                    .align(Alignment.CenterHorizontally)
-                    .clip(CircleShape)
-                    .background(Brush.sweepGradient(BrandGradient))
-                    .padding(3.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .clickable { showAvatarPicker = true },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(currentUser.avatarEmoji, fontSize = 42.sp)
-            }
-            Text(
-                "اضغط لتغيير الصورة الرمزية",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .background(Brush.horizontalGradient(BrandGradient))
+            )
+
+            Column(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 8.dp)
-            )
+                    .fillMaxWidth()
+                    .offset(y = (-52).dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    UserAvatar(
+                        avatarEmoji = currentUser.avatarEmoji,
+                        profileImageBase64 = currentUser.profileImageBase64,
+                        size = 104.dp,
+                        showGradientRing = true,
+                        modifier = Modifier
+                            .shadow(6.dp, CircleShape)
+                            .clickable { showAvatarSourceSheet = true }
+                    )
 
-            Spacer(Modifier.height(6.dp))
-            Text(
-                currentUser.username,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            if (currentUser.isAdmin) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 6.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Brush.horizontalGradient(BrandGradient))
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text("مسؤول", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            SectionCard {
-                Text(
-                    "نبذة عنك",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(10.dp))
-                TextField(
-                    value = bio,
-                    onValueChange = { if (it.length <= User.MAX_BIO_LENGTH) bio = it },
-                    placeholder = { Text("اكتب نبذة قصيرة عنك…") },
-                    supportingText = { Text("${bio.length}/${User.MAX_BIO_LENGTH}") },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-                Button(
-                    onClick = { viewModel.updateBio(currentUser.usernameLower, bio, onUserUpdated) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 10.dp)
-                ) { Text("حفظ النبذة") }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            SectionCard {
-                Text(
-                    "المظهر",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(10.dp))
-                SingleChoiceSegmented(
-                    options = listOf("system" to "النظام", "light" to "فاتح", "dark" to "داكن"),
-                    selected = darkModePref,
-                    onSelected = onDarkModePrefChanged
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            SectionCard {
-                Text(
-                    "لون فقاعة رسائلك",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(10.dp))
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(6),
-                    modifier = Modifier.height(110.dp)
-                ) {
-                    items(BUBBLE_COLOR_PALETTE) { hex ->
-                        val isSelected = hex.equals(currentUser.bubbleColorHex, ignoreCase = true)
+                    if (isUploadingImage) {
                         Box(
                             modifier = Modifier
-                                .padding(6.dp)
-                                .size(36.dp)
+                                .size(104.dp)
                                 .clip(CircleShape)
-                                .background(parseHexColor(hex))
-                                .border(
-                                    width = if (isSelected) 2.dp else 0.dp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    shape = CircleShape
-                                )
-                                .clickable {
-                                    viewModel.updateBubbleColor(currentUser.usernameLower, hex, onUserUpdated)
-                                },
+                                .background(Color.Black.copy(alpha = 0.35f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isSelected) {
-                                Icon(
-                                    Icons.Filled.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(28.dp),
+                                color = Color.White,
+                                strokeWidth = 2.5.dp
+                            )
                         }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(BrandGradient))
+                            .clickable { showAvatarSourceSheet = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.CameraAlt,
+                            contentDescription = "تغيير صورة الملف الشخصي",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        currentUser.username,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (currentUser.isAdmin) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.VerifiedUser,
+                            contentDescription = "مسؤول",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(WhatsAppGreen)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "متصل الآن",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (currentUser.isAdmin) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 10.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.horizontalGradient(BrandGradient))
+                            .padding(horizontal = 14.dp, vertical = 5.dp)
+                    ) {
+                        Text("مسؤول النظام", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Column(modifier = Modifier.offset(y = (-40).dp)) {
+                SectionCard {
+                    SectionHeader(icon = Icons.Filled.EditNote, title = "نبذة عنك")
+                    Spacer(Modifier.height(10.dp))
+                    TextField(
+                        value = bio,
+                        onValueChange = { if (it.length <= User.MAX_BIO_LENGTH) bio = it },
+                        placeholder = { Text("اكتب نبذة قصيرة عنك…") },
+                        supportingText = { Text("${bio.length}/${User.MAX_BIO_LENGTH}") },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2
+                    )
+                    Button(
+                        onClick = { viewModel.updateBio(currentUser.usernameLower, bio, onUserUpdated) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(top = 10.dp)
+                    ) { Text("حفظ النبذة") }
+                }
 
-            OutlinedButton(
-                onClick = { showLogoutConfirm = true },
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Icon(Icons.Filled.Logout, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("تسجيل الخروج")
+                Spacer(Modifier.height(14.dp))
+
+                SectionCard {
+                    SectionHeader(icon = Icons.Filled.DarkMode, title = "المظهر")
+                    Spacer(Modifier.height(10.dp))
+                    SingleChoiceSegmented(
+                        options = listOf("system" to "النظام", "light" to "فاتح", "dark" to "داكن"),
+                        selected = darkModePref,
+                        onSelected = onDarkModePrefChanged
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                SectionCard {
+                    SectionHeader(icon = Icons.Filled.Palette, title = "لون فقاعة رسائلك")
+                    Spacer(Modifier.height(10.dp))
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(6),
+                        modifier = Modifier.height(110.dp)
+                    ) {
+                        items(BUBBLE_COLOR_PALETTE) { hex ->
+                            val isSelected = hex.equals(currentUser.bubbleColorHex, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(parseHexColor(hex))
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        shape = CircleShape
+                                    )
+                                    .clickable {
+                                        viewModel.updateBubbleColor(currentUser.usernameLower, hex, onUserUpdated)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(22.dp))
+
+                OutlinedButton(
+                    onClick = { showLogoutConfirm = true },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Icon(Icons.Filled.Logout, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("تسجيل الخروج")
+                }
+
+                Spacer(Modifier.height(24.dp))
             }
+        }
+    }
 
-            Spacer(Modifier.height(24.dp))
+    if (showAvatarSourceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAvatarSourceSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "صورة الملف الشخصي",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                ListItem(
+                    headlineContent = { Text("اختيار صورة من المعرض") },
+                    leadingContent = {
+                        Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.clickable {
+                        showAvatarSourceSheet = false
+                        pickImageLauncher.launch("image/*")
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("اختيار رمز تعبيري بدلاً من ذلك") },
+                    leadingContent = { Text(currentUser.avatarEmoji, fontSize = 20.sp) },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.clickable {
+                        showAvatarSourceSheet = false
+                        showAvatarPicker = true
+                    }
+                )
+            }
         }
     }
 
@@ -285,12 +404,31 @@ fun ProfileScreen(
 }
 
 @Composable
+private fun SectionHeader(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
 private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .shadow(2.dp, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp),
         content = content
