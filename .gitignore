@@ -12,6 +12,9 @@
 
 # أسرار التوقيع — لا تُرفع إلى GitHub أبداً، تُحفظ فقط كـ GitHub Secrets
 *.keystore
+# استثناء: مفتاح توقيع debug ثابت مطلوب تتبّعه بالمستودع (راجع التعليق بجانب
+# signingConfigs.debug في app/build.gradle.kts لسبب أهميته).
+!app/tomodachi-debug.keystore
 *.jks
 keystore.properties
 
