@@ -1,8 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="tomodachi_primary">#FF6F61</color>
-    <color name="tomodachi_primary_dark">#C43E31</color>
-    <color name="tomodachi_secondary">#5DB7DE</color>
-    <color name="splash_background">#FF6F61</color>
+    <!-- تدرّج العلامة المستوحى من انستقرام -->
+    <color name="brand_purple">#833AB4</color>
+    <color name="brand_pink">#FD1D8D</color>
+    <color name="brand_red">#FD1D1D</color>
+    <color name="brand_orange">#F77737</color>
+    <color name="brand_yellow">#FCAF45</color>
+
+    <color name="ig_blue">#0095F6</color>
+
+    <!-- أسماء قديمة أُبقيت للتوافق -->
+    <color name="tomodachi_primary">#0095F6</color>
+    <color name="tomodachi_primary_dark">#4DABF7</color>
+    <color name="tomodachi_secondary">#833AB4</color>
+
+    <color name="splash_background">#FFFFFF</color>
     <color name="brand_dark">#C43E31</color>
 </resources>
