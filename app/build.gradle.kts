@@ -38,6 +38,24 @@ android {
                 this.keyPassword = keyPassword
             }
         }
+        // مفتاح توقيع debug ثابت وموجود بالمستودع (app/tomodachi-debug.keystore).
+        // بدونه، كل بناء على GitHub Actions كان يولّد مفتاح debug عشوائي جديد (لأن
+        // كل تشغيل CI يبدأ بجهاز فارغ بدون ~/.android/debug.keystore السابق)، فيصير
+        // كل APK تجريبي جديد بتوقيع مختلف عن السابق. Android لا يسمح بتحديث تطبيق
+        // فوق نسخة موقّعة بمفتاح مختلف، فيُجبر المستخدم على حذف التطبيق قبل كل
+        // تثبيت جديد، وهذا يمسح كل بيانات الجلسة (تسجيل الدخول، التفضيلات، الكاش)
+        // في كل مرة — وهو ما كان يبدو وكأن "تسجيل الدخول ما يتذكرني أبداً".
+        // بتثبيت مفتاح debug ثابت هنا، يصير توقيع كل APK تجريبي مطابقاً للسابق،
+        // فيُحدَّث التطبيق مكان القديم دون حذفه، وتبقى الجلسة محفوظة تماماً كباقي
+        // تطبيقات التواصل.
+        // "debug" موجود مسبقاً بشكل تلقائي من Android Gradle Plugin — لهذا نستخدم
+        // getByName لإعادة ضبطه بدل create (create يفشل لأنه موجود أصلاً).
+        getByName("debug") {
+            storeFile = file("tomodachi-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -51,6 +69,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
