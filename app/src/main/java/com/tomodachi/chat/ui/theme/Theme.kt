@@ -5,19 +5,44 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
-    primary = TomodachiPrimaryLight,
-    secondary = TomodachiSecondary,
+    primary = IgBlue,
+    onPrimary = Color.White,
+    primaryContainer = LightFieldFill,
+    onPrimaryContainer = LightOnSurface,
+    secondary = GradientPurple,
+    onSecondary = Color.White,
     background = LightBackground,
-    surface = LightSurface
+    onBackground = LightOnSurface,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightFieldFill,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightDivider,
+    error = GradientRed,
+    errorContainer = Color(0xFFFFE8E8),
+    onErrorContainer = GradientRed
 )
 
 private val DarkColors = darkColorScheme(
-    primary = TomodachiPrimaryDark,
-    secondary = TomodachiSecondary,
+    primary = IgBlueDark,
+    onPrimary = Color.Black,
+    primaryContainer = DarkFieldFill,
+    onPrimaryContainer = DarkOnSurface,
+    secondary = GradientPurple,
+    onSecondary = Color.White,
     background = DarkBackground,
-    surface = DarkSurface
+    onBackground = DarkOnSurface,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    surfaceVariant = DarkFieldFill,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkDivider,
+    error = Color(0xFFFF6B6B),
+    errorContainer = Color(0xFF3A1414),
+    onErrorContainer = Color(0xFFFF6B6B)
 )
 
 /**
@@ -40,6 +65,7 @@ fun TomodachiTheme(
     MaterialTheme(
         colorScheme = colors,
         typography = TomodachiTypography,
+        shapes = TomodachiShapes,
         content = content
     )
 }
