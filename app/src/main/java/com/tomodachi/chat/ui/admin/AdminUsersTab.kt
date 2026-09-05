@@ -76,7 +76,19 @@ fun AdminUsersTab(users: List<User>, viewModel: AdminViewModel) {
                         }
                     }
                     if (user.isAdmin) {
-                        AssistChip(onClick = {}, label = { Text("أدمن") })
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                "أدمن",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
