@@ -48,3 +48,13 @@ val DarkBubbleOther = Color(0xFF262626)
 val TomodachiPrimaryLight = IgBlue
 val TomodachiPrimaryDark = IgBlueDark
 val TomodachiSecondary = GradientPurple
+
+// لمسة أخضر واتساب — تُستخدم حصرياً لمؤشرات الحالة (متصل الآن، تم الإرسال/القراءة)
+// لدمج لغة واتساب البصرية المألوفة مع هوية انستقرام المتدرّجة في باقي الواجهة.
+val WhatsAppGreen = Color(0xFF25D366)
+val WhatsAppTeal = Color(0xFF128C7E)
+
+// درجات مساعدة لفقاعات الرسائل وأشرطة الواجهة العائمة
+val BubbleShadow = Color(0x1A000000)
+val OnlineDotBorderLight = Color(0xFFFFFFFF)
+val OnlineDotBorderDark = Color(0xFF121212)
