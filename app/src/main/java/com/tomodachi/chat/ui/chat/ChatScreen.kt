@@ -1,28 +1,34 @@
 package com.tomodachi.chat.ui.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.tomodachi.chat.data.model.Message
-import com.tomodachi.chat.data.model.MessageType
 import com.tomodachi.chat.data.model.User
 import com.tomodachi.chat.ui.emoji.EmojiPickerSheet
 import com.tomodachi.chat.ui.stickers.StickerPickerSheet
+import com.tomodachi.chat.ui.theme.BrandGradient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,49 +74,92 @@ fun ChatScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("دردشة Tomodachi") },
-                    actions = {
-                        if (currentUser.isAdmin) {
-                            IconButton(onClick = onOpenAdmin) {
-                                Icon(Icons.Filled.AdminPanelSettings, contentDescription = "لوحة التحكم")
-                            }
-                        }
-                        IconButton(onClick = onOpenProfile) {
-                            Icon(Icons.Filled.Person, contentDescription = "الملف الشخصي")
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(BrandGradient))
+                            .clickable(onClick = onOpenProfile),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(currentUser.avatarEmoji, fontSize = 18.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Semo",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "الدردشة الجماعية",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (currentUser.isAdmin) {
+                        IconButton(onClick = onOpenAdmin) {
+                            Icon(
+                                Icons.Filled.AdminPanelSettings,
+                                contentDescription = "لوحة التحكم",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
-                )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.6.dp)
                 TypingIndicator(typingUsers)
             }
         },
         bottomBar = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
                 val activePreview = editingMessage ?: replyTarget
                 if (activePreview != null) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text(
                                 if (editingMessage != null) "تعديل رسالتك" else "رد على ${activePreview.senderUsername}",
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
                             )
-                            Text(activePreview.text.ifBlank { "🖼️ ستيكر" }, maxLines = 1)
+                            Text(
+                                activePreview.text.ifBlank { "🖼️ ستيكر" },
+                                maxLines = 1,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                         IconButton(onClick = {
                             if (editingMessage != null) { viewModel.cancelEditing(); inputText = "" }
                             else viewModel.setReplyTarget(null)
                         }) {
-                            Icon(Icons.Filled.Close, contentDescription = "إلغاء")
+                            Icon(Icons.Filled.Close, contentDescription = "إلغاء", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -118,33 +167,72 @@ fun ChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp),
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { showEmojiSheet = true }) {
-                        Icon(Icons.Filled.EmojiEmotions, contentDescription = "إيموجي")
+                    IconButton(onClick = { showStickerSheet = true }, modifier = Modifier.size(38.dp)) {
+                        Text("🖼️", fontSize = 20.sp)
                     }
-                    IconButton(onClick = { showStickerSheet = true }) {
-                        Text("🖼️")
-                    }
-                    OutlinedTextField(
-                        value = inputText,
-                        onValueChange = {
-                            inputText = it
-                            viewModel.onInputChanged(it)
-                        },
-                        placeholder = { Text("اكتب رسالة…") },
-                        modifier = Modifier.weight(1f),
-                        maxLines = 4
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    IconButton(onClick = {
-                        if (inputText.isNotBlank()) {
-                            viewModel.sendMessage(inputText)
-                            inputText = ""
+                    Spacer(Modifier.width(2.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { showEmojiSheet = true }, modifier = Modifier.size(34.dp)) {
+                            Icon(
+                                Icons.Filled.EmojiEmotions,
+                                contentDescription = "إيموجي",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    }) {
-                        Icon(Icons.Filled.Send, contentDescription = "إرسال")
+                        TextField(
+                            value = inputText,
+                            onValueChange = {
+                                inputText = it
+                                viewModel.onInputChanged(it)
+                            },
+                            placeholder = { Text("اكتب رسالة…", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 4
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    val canSend = inputText.isNotBlank()
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (canSend) Brush.linearGradient(BrandGradient)
+                                else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant))
+                            )
+                            .clickable(enabled = canSend) {
+                                viewModel.sendMessage(inputText)
+                                inputText = ""
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Send,
+                            contentDescription = "إرسال",
+                            tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -154,6 +242,7 @@ fun ChatScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
             items(messages, key = { it.id }) { message ->
@@ -193,8 +282,8 @@ fun ChatScreen(
             onToggleFavorite = onToggleFavoriteSticker,
             onStickerSelected = { sticker ->
                 showStickerSheet = false
-                val previewText = sticker.label.ifBlank { "ستيكر" }
-                viewModel.sendMessage("[STICKER]$previewText") // نص احتياطي؛ نوع الرسالة الفعلي STICKER يُضبط أدناه
+                // يُرسل الستيكر كرسالة من نوع STICKER فعلياً (وليس كنص بديل)
+                viewModel.sendSticker(sticker)
             },
             onDismiss = { showStickerSheet = false }
         )

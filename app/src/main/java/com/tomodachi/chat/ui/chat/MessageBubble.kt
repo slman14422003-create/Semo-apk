@@ -3,6 +3,7 @@ package com.tomodachi.chat.ui.chat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -15,12 +16,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.tomodachi.chat.data.model.Message
 import com.tomodachi.chat.data.model.MessageStatus
 import com.tomodachi.chat.data.model.MessageType
+import com.tomodachi.chat.ui.theme.BrandGradient
 import com.tomodachi.chat.util.parseHexColor
 import com.tomodachi.chat.util.readableTextColorFor
 
@@ -39,99 +43,140 @@ fun MessageBubble(
     var showActions by remember { mutableStateOf(false) }
     val bubbleColor = parseHexColor(message.bubbleColorHex)
     val textColor = readableTextColorFor(bubbleColor)
+    val bubbleShape = RoundedCornerShape(
+        topStart = 18.dp, topEnd = 18.dp,
+        bottomStart = if (isMine) 18.dp else 4.dp,
+        bottomEnd = if (isMine) 4.dp else 18.dp
+    )
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 3.dp),
         horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
     ) {
         if (!isMine) {
             Text(
                 "${message.senderAvatarEmoji} ${message.senderUsername}",
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(bottom = 2.dp, start = 4.dp)
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 3.dp, start = 6.dp)
             )
         }
 
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 16.dp, topEnd = 16.dp,
-                        bottomStart = if (isMine) 16.dp else 4.dp,
-                        bottomEnd = if (isMine) 4.dp else 16.dp
-                    )
-                )
-                .background(if (message.isDeleted) MaterialTheme.colorScheme.surfaceVariant else bubbleColor)
-                .combinedClickable(onClick = { showActions = true }, onLongClick = { showActions = true })
-                .padding(10.dp)
-        ) {
-            Column {
-                if (message.replyToMessageId.isNotBlank() && !message.isDeleted) {
-                    Column(
+        if (message.type == MessageType.STICKER && !message.isDeleted) {
+            // فقاعة ستيكر: صورة فعلية إن وُجد رابط، وإلا بطاقة بتدرّج العلامة كبديل
+            Box(
+                modifier = Modifier
+                    .combinedClickable(onClick = { showActions = true }, onLongClick = { showActions = true })
+            ) {
+                if (message.stickerUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = message.stickerUrl,
+                        contentDescription = message.text.ifBlank { "ستيكر" },
                         modifier = Modifier
-                            .background((if (isMine) textColor else bubbleColor).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                            .padding(6.dp)
+                            .size(140.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Brush.linearGradient(BrandGradient)),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            message.replyToUsername,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
-                        Text(
-                            message.replyToPreview,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = textColor.copy(alpha = 0.85f),
-                            maxLines = 1
+                            message.text.ifBlank { "🖼️" },
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(8.dp)
                         )
                     }
-                    Spacer(Modifier.height(4.dp))
                 }
-
-                when {
-                    message.isDeleted -> Text(
-                        "تم حذف هذه الرسالة",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    message.type == MessageType.STICKER -> Text("🖼️ ${message.text.ifBlank { "ستيكر" }}", color = textColor)
-                    else -> Text(message.text, color = textColor)
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    if (message.isEdited && !message.isDeleted) {
-                        Text(
-                            "(معدَّل)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = textColor.copy(alpha = 0.7f)
-                        )
-                    }
-                    if (message.status == MessageStatus.SENDING) {
-                        Spacer(Modifier.width(4.dp))
-                        Text("… يُرسل", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.7f))
-                    }
-                    if (message.status == MessageStatus.FAILED) {
-                        Spacer(Modifier.width(4.dp))
-                        IconButton(onClick = onRetry, modifier = Modifier.size(20.dp)) {
-                            Icon(Icons.Filled.Refresh, contentDescription = "إعادة المحاولة", tint = textColor)
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .clip(bubbleShape)
+                    .background(if (message.isDeleted) MaterialTheme.colorScheme.surfaceVariant else bubbleColor)
+                    .combinedClickable(onClick = { showActions = true }, onLongClick = { showActions = true })
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Column {
+                    if (message.replyToMessageId.isNotBlank() && !message.isDeleted) {
+                        Column(
+                            modifier = Modifier
+                                .background((if (isMine) textColor else bubbleColor).copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                message.replyToUsername,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                            Text(
+                                message.replyToPreview,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = textColor.copy(alpha = 0.85f),
+                                maxLines = 1
+                            )
                         }
-                        Text("فشل الإرسال", style = MaterialTheme.typography.labelSmall, color = textColor)
+                        Spacer(Modifier.height(4.dp))
+                    }
+
+                    if (message.isDeleted) {
+                        Text(
+                            "تم حذف هذه الرسالة",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
+                    } else {
+                        Text(message.text, color = textColor, style = MaterialTheme.typography.bodyLarge)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        if (message.isEdited && !message.isDeleted) {
+                            Text(
+                                "(معدَّل)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = textColor.copy(alpha = 0.7f)
+                            )
+                        }
+                        if (message.status == MessageStatus.SENDING) {
+                            Spacer(Modifier.width(4.dp))
+                            Text("… يُرسل", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.7f))
+                        }
+                        if (message.status == MessageStatus.FAILED) {
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(onClick = onRetry, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Filled.Refresh, contentDescription = "إعادة المحاولة", tint = textColor)
+                            }
+                            Text("فشل الإرسال", style = MaterialTheme.typography.labelSmall, color = textColor)
+                        }
                     }
                 }
             }
         }
 
         if (message.reactions.isNotEmpty() && !message.isDeleted) {
-            Row(modifier = Modifier.padding(top = 2.dp)) {
+            Row(modifier = Modifier.padding(top = 4.dp)) {
                 message.reactions.values.filter { it.count > 0 }.forEach { reaction ->
-                    AssistChip(
-                        onClick = { onReact(reaction.emoji) },
-                        label = { Text("${reaction.emoji} ${reaction.count}", fontSize = 12.sp) },
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .combinedClickable(onClick = { onReact(reaction.emoji) })
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text("${reaction.emoji} ${reaction.count}", fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -163,34 +208,46 @@ private fun MessageActionsSheet(
     onDelete: () -> Unit,
     onReact: (String) -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Message.DEFAULT_REACTIONS.forEach { emoji ->
-                    Text(
-                        emoji,
-                        fontSize = 26.sp,
+                    Box(
                         modifier = Modifier
-                            .padding(end = 10.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(CircleShape)
                             .combinedClickable(onClick = { onReact(emoji) })
-                            .padding(4.dp)
-                    )
+                            .padding(6.dp)
+                    ) {
+                        Text(emoji, fontSize = 26.sp)
+                    }
                 }
             }
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.6.dp)
             if (!message.isDeleted) {
-                ListItem(headlineContent = { Text("رد") }, modifier = Modifier.combinedClickable(onClick = onReply))
+                ListItem(
+                    headlineContent = { Text("رد") },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.combinedClickable(onClick = onReply)
+                )
                 if (isMine || isAdmin) {
                     if (message.type == MessageType.TEXT) {
-                        ListItem(headlineContent = { Text("تعديل") }, modifier = Modifier.combinedClickable(onClick = onEdit))
+                        ListItem(
+                            headlineContent = { Text("تعديل") },
+                            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier.combinedClickable(onClick = onEdit)
+                        )
                     }
                     ListItem(
                         headlineContent = { Text("حذف", color = MaterialTheme.colorScheme.error) },
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
                         modifier = Modifier.combinedClickable(onClick = onDelete)
                     )
                 }
