@@ -38,9 +38,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
 import com.tomodachi.chat.ui.components.BrandMark
 import com.tomodachi.chat.ui.components.BrandWordmark
-import com.tomodachi.chat.ui.theme.BrandGradient
-import com.tomodachi.chat.ui.theme.GradientPurple
+import com.tomodachi.chat.ui.theme.BrandGradientBlue
 import com.tomodachi.chat.ui.theme.GradientRed
+import com.tomodachi.chat.ui.theme.IconBlueBright
 
 @Composable
 fun LoginScreen(
@@ -76,7 +76,7 @@ fun LoginScreen(
                     colors = listOf(
                         MaterialTheme.colorScheme.surface,
                         MaterialTheme.colorScheme.surface,
-                        GradientPurple.copy(alpha = 0.08f)
+                        IconBlueBright.copy(alpha = 0.08f)
                     )
                 )
             ),
@@ -213,7 +213,7 @@ fun LoginScreen(
                                 val disabled = MaterialTheme.colorScheme.surfaceVariant
                                 Brush.horizontalGradient(listOf(disabled, disabled))
                             } else {
-                                Brush.horizontalGradient(BrandGradient)
+                                Brush.horizontalGradient(BrandGradientBlue)
                             }
                         )
                         .clickable(enabled = !isLoading) {
@@ -295,7 +295,7 @@ private fun AuthModeTab(
     onClick: () -> Unit
 ) {
     val bg = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent
-    val fg = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+    val fg = if (selected) IconBlueBright else MaterialTheme.colorScheme.onSurfaceVariant
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
