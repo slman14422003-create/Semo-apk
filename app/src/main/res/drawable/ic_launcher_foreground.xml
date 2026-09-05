@@ -3,7 +3,12 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- جسم فقاعة الدردشة (ضمن منطقة الأمان لأيقونة adaptive) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,24c-16.5,0 -30,11.6 -30,26c0,8.4 4.6,15.8 11.8,20.6l-2.4,10.4c-0.3,1.3 1,2.4 2.2,1.8l12.7,-6.6c1.8,0.3 3.7,0.4 5.7,0.4c16.5,0 30,-11.6 30,-26S70.5,24 54,24zM39,54c-2.8,0 -5,-2.2 -5,-5s2.2,-5 5,-5s5,2.2 5,5S41.8,54 39,54zM54,54c-2.8,0 -5,-2.2 -5,-5s2.2,-5 5,-5s5,2.2 5,5S56.8,54 54,54zM69,54c-2.8,0 -5,-2.2 -5,-5s2.2,-5 5,-5s5,2.2 5,5S71.8,54 69,54z" />
+        android:pathData="M30,32 L78,32 A15,15 0 0,1 93,47 L93,63 A15,15 0 0,1 78,78 L45,78 L32,90 L34,78 L30,78 A15,15 0 0,1 15,63 L15,47 A15,15 0 0,1 30,32 Z" />
+    <!-- ثلاث نقاط بألوان تدرّج العلامة -->
+    <path android:fillColor="#833AB4" android:pathData="M40,55m-5,0a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
+    <path android:fillColor="#FD1D8D" android:pathData="M54,55m-5,0a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
+    <path android:fillColor="#FCAF45" android:pathData="M68,55m-5,0a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
 </vector>
