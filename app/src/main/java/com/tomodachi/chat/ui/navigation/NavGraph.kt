@@ -1,5 +1,9 @@
 package com.tomodachi.chat.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,6 +23,10 @@ import com.tomodachi.chat.ui.profile.ProfileScreen
 import com.tomodachi.chat.ui.splash.SplashScreen
 import kotlinx.coroutines.launch
 
+// مدة موحّدة للانتقالات بين الشاشات — تلاشٍ ناعم مع تكبير خفيف بدل الانزلاق
+// الافتراضي الحاد، لربط بصري أنيق بين السبلاش وشاشة تسجيل الدخول والواجهة الأساسية.
+private const val TRANSITION_DURATION_MS = 380
+
 @Composable
 fun TomodachiNavGraph(navController: NavHostController = rememberNavController()) {
     val appViewModel: AppViewModel = viewModel()
@@ -30,11 +38,36 @@ fun TomodachiNavGraph(navController: NavHostController = rememberNavController()
     val favoriteStickers by sessionManager.favoriteStickers.collectAsState(initial = emptySet())
     val coroutineScope = rememberCoroutineScope()
 
-    NavHost(navController = navController, startDestination = Screen.Splash.route) {
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Splash.route,
+        enterTransition = {
+            fadeIn(tween(TRANSITION_DURATION_MS)) + scaleIn(
+                initialScale = 0.96f,
+                animationSpec = tween(TRANSITION_DURATION_MS)
+            )
+        },
+        exitTransition = { fadeOut(tween(TRANSITION_DURATION_MS / 2)) },
+        popEnterTransition = {
+            fadeIn(tween(TRANSITION_DURATION_MS)) + scaleIn(
+                initialScale = 0.96f,
+                animationSpec = tween(TRANSITION_DURATION_MS)
+            )
+        },
+        popExitTransition = { fadeOut(tween(TRANSITION_DURATION_MS / 2)) }
+    ) {
         composable(Screen.Splash.route) {
             SplashScreen(
-                onFinished = {
+                onNeedsLogin = {
                     navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onAlreadyLoggedIn = { user ->
+                    // المستخدم كان مسجّلاً دخوله فعلاً — ننتقل مباشرة للواجهة
+                    // الأساسية دون المرور بشاشة تسجيل الدخول إطلاقاً.
+                    appViewModel.setCurrentUser(user)
+                    navController.navigate(Screen.Chat.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
