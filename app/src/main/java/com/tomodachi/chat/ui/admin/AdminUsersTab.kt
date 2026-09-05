@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tomodachi.chat.data.model.User
+import com.tomodachi.chat.ui.components.UserAvatar
 
 @Composable
 fun AdminUsersTab(users: List<User>, viewModel: AdminViewModel) {
@@ -37,24 +39,23 @@ fun AdminUsersTab(users: List<User>, viewModel: AdminViewModel) {
         items(users, key = { it.usernameLower.ifBlank { it.username.ifBlank { "u${it.hashCode()}" } } }) { user ->
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(16.dp))
                     .clickable { userForAction = user }
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(user.avatarEmoji, fontSize = 20.sp)
-                    }
+                    UserAvatar(
+                        avatarEmoji = user.avatarEmoji,
+                        profileImageBase64 = user.profileImageBase64,
+                        size = 44.dp,
+                        showGradientRing = false,
+                        isOnline = user.isOnline
+                    )
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
