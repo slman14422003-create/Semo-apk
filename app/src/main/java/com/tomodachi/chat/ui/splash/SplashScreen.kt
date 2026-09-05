@@ -47,9 +47,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
 import com.tomodachi.chat.ui.components.BrandMark
 import com.tomodachi.chat.ui.components.BrandWordmark
-import com.tomodachi.chat.ui.theme.GradientOrange
-import com.tomodachi.chat.ui.theme.GradientPink
-import com.tomodachi.chat.ui.theme.GradientPurple
+import com.tomodachi.chat.ui.theme.BrandGradientBlue
+import com.tomodachi.chat.ui.theme.IconBlueBright
+import com.tomodachi.chat.ui.theme.IconBlueDeep
 import kotlinx.coroutines.delay
 
 // منحنى "back-ease" لطيف (يتجاوز الحجم النهائي بقليل ثم يستقرّ) لحركة ظهور
@@ -143,7 +143,7 @@ fun SplashScreen(
                     colors = listOf(
                         MaterialTheme.colorScheme.surface,
                         MaterialTheme.colorScheme.surface,
-                        GradientPurple.copy(alpha = 0.10f)
+                        IconBlueBright.copy(alpha = 0.10f)
                     )
                 )
             ),
@@ -163,8 +163,8 @@ fun SplashScreen(
                         .background(
                             brush = Brush.radialGradient(
                                 listOf(
-                                    GradientPurple.copy(alpha = 0.35f),
-                                    GradientPink.copy(alpha = 0.20f),
+                                    IconBlueBright.copy(alpha = 0.35f),
+                                    IconBlueDeep.copy(alpha = 0.20f),
                                     Color.Transparent
                                 )
                             ),
@@ -243,9 +243,7 @@ private fun LoadingDots(progress: Float) {
                     .scale(dotScale)
                     .alpha(dotAlpha)
                     .background(
-                        brush = Brush.linearGradient(
-                            listOf(GradientPurple, GradientPink, GradientOrange)
-                        ),
+                        brush = Brush.linearGradient(BrandGradientBlue),
                         shape = CircleShape
                     )
             )
