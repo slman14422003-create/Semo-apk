@@ -1,23 +1,32 @@
 package com.tomodachi.chat.ui.chat
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -25,8 +34,15 @@ import com.tomodachi.chat.data.model.Message
 import com.tomodachi.chat.data.model.MessageStatus
 import com.tomodachi.chat.data.model.MessageType
 import com.tomodachi.chat.ui.theme.BrandGradient
+import com.tomodachi.chat.util.formatMessageTime
 import com.tomodachi.chat.util.parseHexColor
 import com.tomodachi.chat.util.readableTextColorFor
+import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
+
+private val SWIPE_REPLY_THRESHOLD_DP = 56.dp
+private val SWIPE_REPLY_MAX_DP = 84.dp
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -49,12 +65,79 @@ fun MessageBubble(
         bottomEnd = if (isMine) 4.dp else 18.dp
     )
 
-    Column(
+    // --- سحب أفقي للرد على الرسالة (بأي اتجاه)، على طراز واتساب/تيليجرام ---
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val haptics = LocalHapticFeedback.current
+    val dragScope = rememberCoroutineScope()
+    var liveOffset by remember { mutableStateOf(0f) }
+    val snapBack = remember { Animatable(0f) }
+    val thresholdPx = with(density) { SWIPE_REPLY_THRESHOLD_DP.toPx() }
+    val maxPx = with(density) { SWIPE_REPLY_MAX_DP.toPx() }
+    var thresholdCrossed by remember { mutableStateOf(false) }
+    var isSnapping by remember { mutableStateOf(false) }
+    val currentOffset = if (isSnapping) snapBack.value else liveOffset
+    val replyIconProgress = (currentOffset.absoluteValue / thresholdPx).coerceIn(0f, 1f)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
-        horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+            .pointerInput(message.id, message.isDeleted) {
+                if (message.isDeleted) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragStart = { isSnapping = false },
+                    onDragEnd = {
+                        val crossed = liveOffset.absoluteValue >= thresholdPx
+                        isSnapping = true
+                        dragScope.launch {
+                            snapBack.snapTo(liveOffset)
+                            snapBack.animateTo(0f, tween(180))
+                            isSnapping = false
+                            liveOffset = 0f
+                        }
+                        if (crossed) onReply()
+                        thresholdCrossed = false
+                    },
+                    onDragCancel = {
+                        isSnapping = true
+                        dragScope.launch {
+                            snapBack.snapTo(liveOffset)
+                            snapBack.animateTo(0f, tween(180))
+                            isSnapping = false
+                            liveOffset = 0f
+                        }
+                        thresholdCrossed = false
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        liveOffset = (liveOffset + dragAmount).coerceIn(-maxPx, maxPx)
+                        val nowCrossed = liveOffset.absoluteValue >= thresholdPx
+                        if (nowCrossed && !thresholdCrossed) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                        thresholdCrossed = nowCrossed
+                    }
+                )
+            },
+        contentAlignment = if (currentOffset >= 0) Alignment.CenterStart else Alignment.CenterEnd
     ) {
+        if (replyIconProgress > 0f) {
+            Icon(
+                Icons.Filled.Reply,
+                contentDescription = "رد",
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = replyIconProgress),
+                modifier = Modifier
+                    .padding(horizontal = 18.dp)
+                    .size((16 + 10 * replyIconProgress).dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(currentOffset.roundToInt(), 0) }
+                .padding(horizontal = 12.dp, vertical = 3.dp),
+            horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+        ) {
         if (!isMine) {
             Text(
                 "${message.senderAvatarEmoji} ${message.senderUsername}",
@@ -141,7 +224,15 @@ fun MessageBubble(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        if (message.createdAtMillis > 0L && !message.isDeleted) {
+                            Text(
+                                formatMessageTime(message.createdAtMillis),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = textColor.copy(alpha = 0.7f)
+                            )
+                        }
                         if (message.isEdited && !message.isDeleted) {
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 "(معدَّل)",
                                 style = MaterialTheme.typography.labelSmall,
@@ -179,6 +270,7 @@ fun MessageBubble(
                     }
                 }
             }
+        }
         }
     }
 
