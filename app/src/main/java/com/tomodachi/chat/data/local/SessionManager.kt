@@ -29,6 +29,15 @@ class SessionManager(private val context: Context) {
         val DARK_MODE = stringPreferencesKey("dark_mode_pref") // "system" | "dark" | "light"
         val FAVORITE_STICKERS = stringSetPreferencesKey("favorite_stickers")
 
+        // إعدادات المظهر العامة للتطبيق (منقولة من شاشة الملف الشخصي إلى شاشة
+        // الإعدادات المستقلة): لون العلامة الرئيسي، شكل فقاعات الدردشة، وحجم خط الرسائل.
+        val ACCENT_COLOR = stringPreferencesKey("accent_color_hex") // فارغ = التدرّج الافتراضي
+        val BUBBLE_SHAPE = stringPreferencesKey("bubble_shape_pref") // انظر BubbleShapeStyle
+        val FONT_SCALE = stringPreferencesKey("message_font_scale") // "0.9" .. "1.3"
+
+        // آخر إصدار تحقّق منه المستخدم يدوياً وتجاهله (كي لا نُزعجه بنفس الإشعار مرارًا)
+        val DISMISSED_UPDATE_TAG = stringPreferencesKey("dismissed_update_tag")
+
         // نسخة محلية مخبّأة من ملف المستخدم لتسجيل دخول تلقائي يعمل حتى بدون اتصال فوري
         val CACHED_UID = stringPreferencesKey("cached_uid")
         val CACHED_USERNAME = stringPreferencesKey("cached_username")
@@ -104,5 +113,31 @@ class SessionManager(private val context: Context) {
                 current + stickerId
             }
         }
+    }
+
+    // --- إعدادات المظهر العامة (شاشة الإعدادات) ---
+
+    val accentColorHex: Flow<String> = context.dataStore.data.map { it[Keys.ACCENT_COLOR] ?: "" }
+
+    suspend fun setAccentColorHex(hex: String) {
+        context.dataStore.edit { it[Keys.ACCENT_COLOR] = hex }
+    }
+
+    val bubbleShapePref: Flow<String> = context.dataStore.data.map { it[Keys.BUBBLE_SHAPE] ?: "modern" }
+
+    suspend fun setBubbleShapePref(value: String) {
+        context.dataStore.edit { it[Keys.BUBBLE_SHAPE] = value }
+    }
+
+    val fontScalePref: Flow<Float> = context.dataStore.data.map { (it[Keys.FONT_SCALE] ?: "1.0").toFloatOrNull() ?: 1.0f }
+
+    suspend fun setFontScalePref(value: Float) {
+        context.dataStore.edit { it[Keys.FONT_SCALE] = value.toString() }
+    }
+
+    val dismissedUpdateTag: Flow<String> = context.dataStore.data.map { it[Keys.DISMISSED_UPDATE_TAG] ?: "" }
+
+    suspend fun setDismissedUpdateTag(tag: String) {
+        context.dataStore.edit { it[Keys.DISMISSED_UPDATE_TAG] = tag }
     }
 }
