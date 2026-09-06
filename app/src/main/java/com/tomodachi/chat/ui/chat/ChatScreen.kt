@@ -4,7 +4,13 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,19 +20,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Reply
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +46,21 @@ import com.tomodachi.chat.ui.stickers.StickerPickerSheet
 import com.tomodachi.chat.ui.theme.BrandGradient
 import kotlinx.coroutines.launch
 
+/**
+ * شاشة الدردشة الرئيسية — تصميم مستوحى من أحدث واجهات إنستقرام للمحادثات
+ * الجماعية: شريط علوي مسطّح بلمسة تدرّج خفيفة، خلفية محادثة نظيفة بلون واحد
+ * (بدل التدرّج الثقيل سابقاً)، وشريط كتابة بأسلوب "pill" حديث.
+ *
+ * إصلاح الفراغ الأسود فوق لوحة المفاتيح:
+ * المشكلة الفعلية لم تكن في هذا الملف فقط، بل في أن النشاط لم يكن يحمل
+ * `android:windowSoftInputMode="adjustResize"` — بدونها يُعيد النظام رسم
+ * النافذة بطريقة "pan" بينما تحاول Compose في الوقت نفسه إضافة حشوة IME
+ * الخاصة بها، فينتج فراغان متراكبان بدل فراغ واحد صحيح. بعد إضافة
+ * adjustResize في AndroidManifest، أصبح كافياً هنا استخدام
+ * `navigationBarsPadding()` + `imePadding()` بأسلوب قياسي مباشر (بدل union
+ * يدوي)، مع تصفير `contentWindowInsets` الخاصة بـ Scaffold حتى لا يُحتسب أي
+ * جزء من الحشوة مرتين.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ChatScreen(
@@ -83,239 +104,56 @@ fun ChatScreen(
     }
 
     Scaffold(
+        // نُصفّر حشوة Scaffold الافتراضية (والتي تشمل safeDrawing، أي شريط
+        // الحالة + شريط التنقل + IME) لأننا نتولى كل واحدة منها يدوياً بالضبط
+        // حيث نحتاجها (statusBarsPadding في الأعلى، navigationBars+ime في
+        // الأسفل) — احتسابها مرتين هو ما يُنتج فراغات فارغة غير متوقعة.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(elevation = 3.dp)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .statusBarsPadding()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    UserAvatar(
-                        avatarEmoji = currentUser.avatarEmoji,
-                        profileImageBase64 = currentUser.profileImageBase64,
-                        size = 42.dp,
-                        showGradientRing = true,
-                        isOnline = currentUser.isOnline,
-                        onClick = onOpenProfile
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
-                        Text(
-                            "Tomodachi",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        AnimatedContent(targetState = typingUsers.isNotEmpty(), label = "subtitle") { isTyping ->
-                            if (isTyping) {
-                                TypingIndicator(typingUsers)
-                            } else {
-                                Text(
-                                    "الدردشة الجماعية",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                    if (currentUser.isAdmin) {
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            IconButton(onClick = onOpenAdmin) {
-                                Icon(
-                                    Icons.Filled.AdminPanelSettings,
-                                    contentDescription = "لوحة التحكم",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
-                // خط تدرّج رفيع بأسلوب انستقرام بدل الفاصل الرمادي التقليدي
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .background(Brush.horizontalGradient(BrandGradient))
-                )
-            }
+            ChatTopBar(
+                currentUser = currentUser,
+                typingUsers = typingUsers,
+                onOpenProfile = onOpenProfile,
+                onOpenAdmin = onOpenAdmin
+            )
         },
         bottomBar = {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                    // نأخذ "الأكبر" بين ارتفاع لوحة المفاتيح وارتفاع شريط التنقل بدل
-                    // جمعهما (union) — فجمعهما كوسادتين منفصلتين هو بالضبط ما كان
-                    // يُنتج الفراغ الفارغ فوق لوحة المفاتيح مباشرة عند فتحها.
-                    .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
-            ) {
-                // خط فاصل رفيع ومسطّح بدل ظل ثقيل — أقرب لأسلوب انستقرام المسطّح
-                // في شريط الكتابة، بدل مظهر "بطاقة عائمة" مبالغ فيه.
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                    thickness = 0.6.dp
-                )
-                val activePreview = editingMessage ?: replyTarget
-                AnimatedVisibility(visible = activePreview != null) {
-                    if (activePreview != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(3.dp)
-                                    .height(32.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Brush.verticalGradient(BrandGradient))
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Icon(
-                                if (editingMessage != null) Icons.Filled.EditNote else Icons.Filled.Reply,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    if (editingMessage != null) "تعديل رسالتك" else "رد على ${activePreview.senderUsername}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    activePreview.text.ifBlank { "🖼️ ستيكر" },
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(onClick = {
-                                if (editingMessage != null) { viewModel.cancelEditing(); inputText = "" }
-                                else viewModel.setReplyTarget(null)
-                            }) {
-                                Icon(Icons.Filled.Close, contentDescription = "إلغاء", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
+            ChatInputBar(
+                inputText = inputText,
+                onInputTextChange = {
+                    inputText = it
+                    viewModel.onInputChanged(it)
+                },
+                activePreviewMessage = editingMessage ?: replyTarget,
+                isEditing = editingMessage != null,
+                onCancelPreview = {
+                    if (editingMessage != null) { viewModel.cancelEditing(); inputText = "" }
+                    else viewModel.setReplyTarget(null)
+                },
+                onOpenStickers = { showStickerSheet = true },
+                onOpenEmoji = { showEmojiSheet = true },
+                onSend = {
+                    viewModel.sendMessage(inputText)
+                    inputText = ""
                 }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    IconButton(onClick = { showStickerSheet = true }, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            Icons.Filled.Image,
-                            contentDescription = "الستيكرات",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(2.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 46.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { showEmojiSheet = true }, modifier = Modifier.size(34.dp)) {
-                            Icon(
-                                Icons.Filled.EmojiEmotions,
-                                contentDescription = "إيموجي",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        TextField(
-                            value = inputText,
-                            onValueChange = {
-                                inputText = it
-                                viewModel.onInputChanged(it)
-                            },
-                            placeholder = { Text("اكتب رسالة…", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier.weight(1f),
-                            maxLines = 4
-                        )
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    val canSend = inputText.isNotBlank()
-                    val sendScale by animateFloatAsState(if (canSend) 1f else 0.92f, label = "send_scale")
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .scale(sendScale)
-                            .shadow(if (canSend) 4.dp else 0.dp, CircleShape)
-                            .clip(CircleShape)
-                            .background(
-                                if (canSend) Brush.linearGradient(BrandGradient)
-                                else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant))
-                            )
-                            .clickable(enabled = canSend) {
-                                viewModel.sendMessage(inputText)
-                                inputText = ""
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.Send,
-                            contentDescription = "إرسال",
-                            tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
+            )
         }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.background,
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        )
-                    )
-                )
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
+            if (messages.isEmpty()) {
+                EmptyChatState()
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 6.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp)
             ) {
                 items(messages, key = { it.id }) { message ->
                     MessageBubble(
@@ -360,5 +198,282 @@ fun ChatScreen(
             },
             onDismiss = { showStickerSheet = false }
         )
+    }
+}
+
+/** شريط علوي مسطّح بأسلوب إنستقرام: صورة رمزية + اسم + حالة الكتابة، وخط تدرّج شعري. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+@Composable
+private fun ChatTopBar(
+    currentUser: User,
+    typingUsers: List<String>,
+    onOpenProfile: () -> Unit,
+    onOpenAdmin: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            UserAvatar(
+                avatarEmoji = currentUser.avatarEmoji,
+                profileImageBase64 = currentUser.profileImageBase64,
+                size = 40.dp,
+                showGradientRing = true,
+                isOnline = currentUser.isOnline,
+                onClick = onOpenProfile
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Tomodachi",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Icon(
+                        Icons.Filled.Groups,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                AnimatedContent(targetState = typingUsers.isNotEmpty(), label = "subtitle") { isTyping ->
+                    if (isTyping) {
+                        TypingIndicator(typingUsers)
+                    } else {
+                        Text(
+                            "نشِطون الآن",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            if (currentUser.isAdmin) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    IconButton(onClick = onOpenAdmin) {
+                        Icon(
+                            Icons.Filled.AdminPanelSettings,
+                            contentDescription = "لوحة التحكم",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+        // خط تدرّج شعري بأسلوب إنستقرام بدل الفاصل الرمادي التقليدي — أنحف
+        // ممّا كان سابقاً كي يبقى التصميم مسطّحاً وهادئاً بصرياً.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.5.dp)
+                .background(Brush.horizontalGradient(BrandGradient))
+        )
+    }
+}
+
+/** حالة فارغة لطيفة تُعرض قبل وصول أول رسالة، بدل شاشة سوداء صامتة. */
+@Composable
+private fun EmptyChatState() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(BrandGradient.map { it.copy(alpha = 0.14f) })),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Groups,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "لا رسائل بعد",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "كن أول من يبدأ الحديث في المجموعة",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * شريط الكتابة السفلي — يحمل معاينة الرد/التعديل واستمارة الإدخال، ويطبّق
+ * حشوة لوحة المفاتيح وشريط التنقل بالطريقة القياسية الموصى بها من Compose:
+ * `navigationBarsPadding()` ثم `imePadding()` كخطوتين منفصلتين ومباشرتين،
+ * بدل union يدوي كان يسبب ازدواج الحشوة مع سلوك النافذة قبل adjustResize.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatInputBar(
+    inputText: String,
+    onInputTextChange: (String) -> Unit,
+    activePreviewMessage: com.tomodachi.chat.data.model.Message?,
+    isEditing: Boolean,
+    onCancelPreview: () -> Unit,
+    onOpenStickers: () -> Unit,
+    onOpenEmoji: () -> Unit,
+    onSend: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding()
+            .imePadding()
+    ) {
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+            thickness = 0.6.dp
+        )
+
+        AnimatedVisibility(
+            visible = activePreviewMessage != null,
+            enter = expandVertically(tween(180)) + fadeIn(tween(180)),
+            exit = shrinkVertically(tween(150)) + fadeOut(tween(120))
+        ) {
+            if (activePreviewMessage != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.verticalGradient(BrandGradient))
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        if (isEditing) Icons.Filled.EditNote else Icons.Filled.Reply,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (isEditing) "تعديل رسالتك" else "رد على ${activePreviewMessage.senderUsername}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            activePreviewMessage.text.ifBlank { "🖼️ ستيكر" },
+                            maxLines = 1,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onCancelPreview, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "إلغاء", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            IconButton(onClick = onOpenStickers, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    Icons.Filled.PhotoLibrary,
+                    contentDescription = "الستيكرات",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.width(2.dp))
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 46.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onOpenEmoji, modifier = Modifier.size(34.dp)) {
+                    Icon(
+                        Icons.Filled.EmojiEmotions,
+                        contentDescription = "إيموجي",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextField(
+                    value = inputText,
+                    onValueChange = onInputTextChange,
+                    placeholder = { Text("اكتب رسالة…", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 4
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            val canSend = inputText.isNotBlank()
+            val sendScale by animateFloatAsState(if (canSend) 1f else 0.9f, label = "send_scale")
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .scale(sendScale)
+                    .clip(CircleShape)
+                    .background(
+                        if (canSend) Brush.linearGradient(BrandGradient)
+                        else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant))
+                    )
+                    .clickable(enabled = canSend, onClick = onSend),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.ArrowUpward,
+                    contentDescription = "إرسال",
+                    tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }
