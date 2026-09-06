@@ -12,15 +12,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,8 +70,19 @@ fun StickerPickerSheet(
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxHeight(0.72f)) {
-            ScrollableTabRow(selectedTabIndex = selectedTabIndex, edgePadding = 12.dp) {
+        Column(modifier = Modifier.fillMaxHeight(0.75f)) {
+            // رأس اللوحة الجديد — عنوان واضح بأسلوب أنيق بدل القفز مباشرة إلى الألسنة
+            Text(
+                "الملصقات",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+            )
+            ScrollableTabRow(
+                selectedTabIndex = selectedTabIndex,
+                edgePadding = 12.dp,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent
+            ) {
                 packs.forEachIndexed { index, pack ->
                     Tab(
                         selected = selectedTabIndex == index,
@@ -95,6 +111,7 @@ fun StickerPickerSheet(
                     stickers = onlineStickers,
                     isLoading = isLoadingOnline,
                     errorMessage = onlineError,
+                    onRetry = viewModel::retryLoadingOnline,
                     onStickerSelected = onStickerSelected
                 )
 
@@ -116,7 +133,8 @@ fun StickerPickerSheet(
     }
 }
 
-/** حزمة الستيكرات المدمجة (شارات متدرّجة الألوان بدون اعتماد على الإنترنت). */
+/** حزمة الستيكرات المدمجة (شارات متدرّجة الألوان بدون اعتماد على الإنترنت) —
+ * بطاقات مرفوعة قليلاً بظل خفيف بدل دوائر مسطّحة لمظهر أكثر حداثة. */
 @Composable
 private fun BuiltinPackTab(
     pack: com.tomodachi.chat.data.model.StickerPack,
@@ -133,6 +151,7 @@ private fun BuiltinPackTab(
                 Box(
                     modifier = Modifier
                         .size(64.dp)
+                        .shadow(3.dp, CircleShape)
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
@@ -146,6 +165,7 @@ private fun BuiltinPackTab(
                 }
                 Text(
                     if (sticker.id in favoriteIds) "★" else "☆",
+                    color = if (sticker.id in favoriteIds) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clickable { onToggleFavorite(sticker.id) }
                 )
             }
@@ -153,7 +173,9 @@ private fun BuiltinPackTab(
     }
 }
 
-/** تبويب "أونلاين": حقل بحث + شبكة ستيكرات حقيقية مجلوبة من Giphy مجاناً. */
+/** تبويب "أونلاين": حقل بحث بشكل كبسولة حديث + شبكة ستيكرات حقيقية مجلوبة من
+ * Giphy مجاناً، وحالة فشل مُعاد تصميمها بالكامل مع أيقونة واضحة وزر
+ * "إعادة المحاولة" فعلي (لم يكن موجوداً سابقاً — كان المستخدم يعلق دون أي إجراء). */
 @Composable
 private fun OnlineStickersTab(
     query: String,
@@ -161,6 +183,7 @@ private fun OnlineStickersTab(
     stickers: List<Sticker>,
     isLoading: Boolean,
     errorMessage: String?,
+    onRetry: () -> Unit,
     onStickerSelected: (Sticker) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -170,7 +193,13 @@ private fun OnlineStickersTab(
             placeholder = { Text("ابحث عن ستيكرات (بالإنجليزية أفضل)…") },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             singleLine = true,
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -182,7 +211,27 @@ private fun OnlineStickersTab(
             }
 
             errorMessage != null && stickers.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(errorMessage, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(24.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(28.dp)) {
+                    Icon(
+                        Icons.Filled.CloudOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(42.dp)
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        errorMessage,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Button(onClick = onRetry, shape = RoundedCornerShape(50)) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("إعادة المحاولة")
+                    }
+                }
             }
 
             stickers.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -202,6 +251,7 @@ private fun OnlineStickersTab(
                             .padding(6.dp)
                             .fillMaxWidth()
                             .aspectRatio(1f)
+                            .shadow(1.dp, RoundedCornerShape(14.dp))
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { onStickerSelected(sticker) }
@@ -212,7 +262,8 @@ private fun OnlineStickersTab(
     }
 }
 
-/** ستيكرات المستخدمين المرفوعة يدوياً (تبقى كما كانت، بدون تغيير وظيفي). */
+/** ستيكرات المستخدمين المرفوعة يدوياً — بطاقة إرشادية أعلى الشبكة توضّح
+ * الغرض من التبويب بدل الاكتفاء بزر رفع مجرّد. */
 @Composable
 private fun CustomStickersTab(
     stickers: List<Sticker>,
@@ -227,10 +278,20 @@ private fun CustomStickersTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("ستيكراتك المخصّصة", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onUploadClick, enabled = !uploading) {
+            Button(onClick = onUploadClick, enabled = !uploading, shape = RoundedCornerShape(50)) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text(if (uploading) "جارٍ الرفع…" else "رفع ستيكر")
+            }
+        }
+        if (stickers.isEmpty() && !uploading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "لا ستيكرات مخصّصة بعد — اضغط \"رفع ستيكر\" لإضافة أول واحد",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(32.dp)
+                )
             }
         }
         LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 12.dp)) {
@@ -241,6 +302,7 @@ private fun CustomStickersTab(
                     modifier = Modifier
                         .padding(6.dp)
                         .size(72.dp)
+                        .shadow(2.dp, CircleShape)
                         .clip(CircleShape)
                         .clickable { onStickerSelected(sticker) }
                 )

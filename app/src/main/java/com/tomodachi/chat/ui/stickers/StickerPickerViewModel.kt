@@ -2,6 +2,8 @@ package com.tomodachi.chat.ui.stickers
 
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,13 +67,40 @@ class StickerPickerViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    /** يعيد محاولة تحميل الستيكرات الرائجة — تُستخدم من زر "إعادة المحاولة"
+     * الذي يظهر في شاشة الفشل الجديدة بتبويب "أونلاين" بدل ترك المستخدم عالقاً
+     * بدون أي إجراء عند انقطاع الإنترنت لحظياً. */
+    fun retryLoadingOnline() {
+        if (_onlineQuery.value.isBlank()) {
+            loadTrendingOnlineStickers()
+        } else {
+            onOnlineQueryChanged(_onlineQuery.value)
+        }
+    }
+
+    /** يميّز رسالة الخطأ بين "لا يوجد اتصال إنترنت فعلياً على الجهاز" (يمكن
+     * التأكد منها محلياً عبر ConnectivityManager) وبين خطأ خادم/شبكة آخر —
+     * بدل رسالة عامة واحدة تقول دوماً "تحقق من الاتصال" حتى لو كان الإنترنت
+     * فعلاً متصلاً ومشكلة أخرى هي السبب الحقيقي. */
+    private fun isDeviceOnline(): Boolean {
+        val connectivityManager = getApplication<Application>()
+            .getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return true
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun onlineErrorMessage(): String =
+        if (isDeviceOnline()) "تعذّر تحميل الستيكرات — حاول مرة أخرى بعد قليل"
+        else "لا يوجد اتصال بالإنترنت — تحقّق من الشبكة ثم أعد المحاولة"
+
     private fun loadTrendingOnlineStickers() {
         viewModelScope.launch {
             _isLoadingOnline.value = true
             _onlineError.value = null
             GiphyStickerApi.trending()
                 .onSuccess { _onlineStickers.value = it }
-                .onFailure { _onlineError.value = "تعذّر تحميل الستيكرات — تحقق من الاتصال بالإنترنت" }
+                .onFailure { _onlineError.value = onlineErrorMessage() }
             _isLoadingOnline.value = false
         }
     }
@@ -88,7 +117,7 @@ class StickerPickerViewModel(application: Application) : AndroidViewModel(applic
             val result = if (query.isBlank()) GiphyStickerApi.trending() else GiphyStickerApi.search(query)
             result
                 .onSuccess { _onlineStickers.value = it }
-                .onFailure { _onlineError.value = "تعذّر تحميل الستيكرات — تحقق من الاتصال بالإنترنت" }
+                .onFailure { _onlineError.value = onlineErrorMessage() }
             _isLoadingOnline.value = false
         }
     }
