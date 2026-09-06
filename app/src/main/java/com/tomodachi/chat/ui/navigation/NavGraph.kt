@@ -20,6 +20,7 @@ import com.tomodachi.chat.ui.admin.AdminScreen
 import com.tomodachi.chat.ui.auth.LoginScreen
 import com.tomodachi.chat.ui.chat.ChatScreen
 import com.tomodachi.chat.ui.profile.ProfileScreen
+import com.tomodachi.chat.ui.settings.SettingsScreen
 import com.tomodachi.chat.ui.splash.SplashScreen
 import kotlinx.coroutines.launch
 
@@ -88,13 +89,18 @@ fun TomodachiNavGraph(navController: NavHostController = rememberNavController()
         composable(Screen.Chat.route) {
             val user = currentUser
             if (user != null) {
+                val bubbleShapePref by appViewModel.bubbleShapePref.collectAsStateWithLifecycle()
+                val fontScalePref by appViewModel.fontScalePref.collectAsStateWithLifecycle()
                 ChatScreen(
                     currentUser = user,
                     favoriteStickers = favoriteStickers,
+                    bubbleShapeStyle = com.tomodachi.chat.ui.theme.BubbleShapeStyle.fromId(bubbleShapePref),
+                    fontScale = fontScalePref,
                     onToggleFavoriteSticker = { id ->
                         coroutineScope.launch { sessionManager.toggleFavoriteSticker(id) }
                     },
                     onOpenProfile = { navController.navigate(Screen.Profile.route) },
+                    onOpenSettings = { navController.navigate(Screen.Settings.route) },
                     onOpenAdmin = { navController.navigate(Screen.Admin.route) }
                 )
             }
@@ -105,8 +111,6 @@ fun TomodachiNavGraph(navController: NavHostController = rememberNavController()
             if (user != null) {
                 ProfileScreen(
                     currentUser = user,
-                    darkModePref = darkModePref,
-                    onDarkModePrefChanged = { appViewModel.setDarkModePref(it) },
                     onUserUpdated = { appViewModel.refreshCurrentUser() },
                     onLogout = {
                         appViewModel.logout {
@@ -118,6 +122,23 @@ fun TomodachiNavGraph(navController: NavHostController = rememberNavController()
                     onBack = { navController.popBackStack() }
                 )
             }
+        }
+
+        composable(Screen.Settings.route) {
+            val accentColorHex by appViewModel.accentColorHex.collectAsStateWithLifecycle()
+            val bubbleShapePref by appViewModel.bubbleShapePref.collectAsStateWithLifecycle()
+            val fontScalePref by appViewModel.fontScalePref.collectAsStateWithLifecycle()
+            SettingsScreen(
+                darkModePref = darkModePref,
+                onDarkModePrefChanged = { appViewModel.setDarkModePref(it) },
+                accentColorHex = accentColorHex,
+                onAccentColorChanged = { appViewModel.setAccentColorHex(it) },
+                bubbleShapePref = bubbleShapePref,
+                onBubbleShapeChanged = { appViewModel.setBubbleShapePref(it) },
+                fontScalePref = fontScalePref,
+                onFontScaleChanged = { appViewModel.setFontScalePref(it) },
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Admin.route) {
