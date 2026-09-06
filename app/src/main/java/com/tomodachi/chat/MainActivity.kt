@@ -64,8 +64,9 @@ private fun TomodachiRoot() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val sessionManager = ServiceLocator.provideSessionManager(context)
     val darkModePref by sessionManager.darkModePref.collectAsState(initial = "system")
+    val accentColorHex by sessionManager.accentColorHex.collectAsState(initial = "")
 
-    TomodachiTheme(darkModePref = darkModePref) {
+    TomodachiTheme(darkModePref = darkModePref, accentColorHex = accentColorHex) {
         Surface(modifier = Modifier.fillMaxSize()) {
             TomodachiNavGraph()
         }
