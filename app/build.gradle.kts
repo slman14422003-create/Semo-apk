@@ -141,6 +141,9 @@ dependencies {
 
     // Image loading (avatars / sticker uploads)
     implementation("io.coil-kt:coil-compose:2.6.0")
+    // فك تشفير GIF/WebP المتحرّك — ضرورية لعرض ستيكرات Giphy المتحركة فعلياً
+    // بدل إطار ثابت واحد فقط (وهو ما يحدث بدونها حتى مع رابط GIF صالح).
+    implementation("io.coil-kt:coil-gif:2.6.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
