@@ -47,7 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
 import com.tomodachi.chat.ui.components.BrandMark
 import com.tomodachi.chat.ui.components.BrandWordmark
-import com.tomodachi.chat.ui.theme.BrandGradientBlue
+import com.tomodachi.chat.ui.theme.BrandGradient
 import com.tomodachi.chat.ui.theme.IconBlueBright
 import com.tomodachi.chat.ui.theme.IconBlueDeep
 import kotlinx.coroutines.delay
@@ -143,7 +143,7 @@ fun SplashScreen(
                     colors = listOf(
                         MaterialTheme.colorScheme.surface,
                         MaterialTheme.colorScheme.surface,
-                        IconBlueBright.copy(alpha = 0.10f)
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     )
                 )
             ),
@@ -243,7 +243,7 @@ private fun LoadingDots(progress: Float) {
                     .scale(dotScale)
                     .alpha(dotAlpha)
                     .background(
-                        brush = Brush.linearGradient(BrandGradientBlue),
+                        brush = Brush.linearGradient(BrandGradient),
                         shape = CircleShape
                     )
             )
