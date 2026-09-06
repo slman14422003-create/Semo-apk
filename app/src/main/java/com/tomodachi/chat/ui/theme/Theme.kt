@@ -49,13 +49,29 @@ private val DarkColors = darkColorScheme(
     onErrorContainer = Color(0xFFFF6B6B)
 )
 
+/** لوحة ألوان علامة اختيارية يمكن للمستخدم اختيارها من شاشة الإعدادات
+ * الجديدة بدل لون انستقرام الأزرق الثابت — كل قيمة هنا لون "primary" فعلي. */
+val ACCENT_COLOR_CHOICES = listOf(
+    "" to "الافتراضي", // فارغ = يبقى IgBlue/IgBlueDark الأصلي
+    "#0095F6" to "أزرق",
+    "#833AB4" to "بنفسجي",
+    "#FD1D8D" to "وردي",
+    "#25D366" to "أخضر",
+    "#FF6F61" to "مرجاني",
+    "#FCAF45" to "ذهبي",
+    "#2C3E50" to "كحلي"
+)
+
 /**
- * وضع داكن/فاتح قابل للتبديل الحر من داخل التطبيق (شاشة الملف الشخصي)،
- * ولا يعتمد فقط على إعدادات النظام كما يوضّح الباراميتر forceDarkMode.
+ * وضع داكن/فاتح قابل للتبديل الحر من داخل التطبيق (شاشة الإعدادات)، ولا
+ * يعتمد فقط على إعدادات النظام كما يوضّح الباراميتر darkModePref. كما يقبل
+ * الآن [accentColorHex] اختيارياً لتخصيص لون العلامة الرئيسي بدل الأزرق
+ * الثابت — إن كان فارغاً يُستخدم التدرّج الافتراضي كما كان دوماً.
  */
 @Composable
 fun TomodachiTheme(
     darkModePref: String = "system", // "system" | "dark" | "light"
+    accentColorHex: String = "",
     content: @Composable () -> Unit
 ) {
     val systemDark = isSystemInDarkTheme()
@@ -64,7 +80,15 @@ fun TomodachiTheme(
         "light" -> false
         else -> systemDark
     }
-    val colors = if (useDark) DarkColors else LightColors
+    val baseColors = if (useDark) DarkColors else LightColors
+    val accent = accentColorHex.takeIf { it.isNotBlank() }?.let {
+        try { Color(android.graphics.Color.parseColor(it)) } catch (e: Exception) { null }
+    }
+    val colors = if (accent != null) {
+        baseColors.copy(primary = accent, secondary = accent)
+    } else {
+        baseColors
+    }
 
     // يضبط لون أيقونات شريط الحالة/التنقل السفلي (فاتحة على خلفية داكنة، أو
     // داكنة على خلفية فاتحة) في كل مرة يتغيّر فيها الوضع — سواء تلقائياً من
