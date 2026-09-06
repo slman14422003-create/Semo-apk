@@ -24,3 +24,10 @@ fun formatMessageTime(millis: Long): String {
         dateFormat.format(Date(millis))
     }
 }
+
+/** ينسّق تاريخ انضمام المستخدم لعرضه في الملف الشخصي — مثال: "عضو منذ أبريل 2025". */
+fun formatJoinDate(millis: Long): String {
+    if (millis <= 0L) return ""
+    val format = SimpleDateFormat("MMMM yyyy", Locale("ar"))
+    return "عضو منذ ${format.format(Date(millis))}"
+}
