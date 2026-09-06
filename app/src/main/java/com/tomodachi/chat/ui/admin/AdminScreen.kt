@@ -107,7 +107,8 @@ fun AdminScreen(
                 onSelected = { selectedTab = it },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 18.dp, start = 16.dp, end = 16.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 10.dp, start = 16.dp, end = 16.dp)
             )
         }
     }
