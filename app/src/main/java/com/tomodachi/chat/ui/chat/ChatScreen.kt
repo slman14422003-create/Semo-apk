@@ -21,12 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tomodachi.chat.data.model.User
@@ -44,6 +48,7 @@ import com.tomodachi.chat.ui.components.UserAvatar
 import com.tomodachi.chat.ui.emoji.EmojiPickerSheet
 import com.tomodachi.chat.ui.stickers.StickerPickerSheet
 import com.tomodachi.chat.ui.theme.BrandGradient
+import com.tomodachi.chat.ui.theme.BubbleShapeStyle
 import kotlinx.coroutines.launch
 
 /**
@@ -68,7 +73,10 @@ fun ChatScreen(
     favoriteStickers: Set<String>,
     onToggleFavoriteSticker: (String) -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenAdmin: () -> Unit,
+    bubbleShapeStyle: BubbleShapeStyle = BubbleShapeStyle.MODERN,
+    fontScale: Float = 1.0f,
     viewModel: ChatViewModel = viewModel()
 ) {
     LaunchedEffect(currentUser.usernameLower) { viewModel.start(currentUser) }
@@ -116,6 +124,7 @@ fun ChatScreen(
                 currentUser = currentUser,
                 typingUsers = typingUsers,
                 onOpenProfile = onOpenProfile,
+                onOpenSettings = onOpenSettings,
                 onOpenAdmin = onOpenAdmin
             )
         },
@@ -160,6 +169,8 @@ fun ChatScreen(
                         message = message,
                         isMine = message.senderUid == currentUser.uid,
                         isAdmin = currentUser.isAdmin,
+                        bubbleShapeStyle = bubbleShapeStyle,
+                        fontScale = fontScale,
                         onReply = { viewModel.setReplyTarget(message) },
                         onEdit = { viewModel.startEditing(message) },
                         onDelete = { viewModel.deleteMessage(message) },
@@ -208,6 +219,7 @@ private fun ChatTopBar(
     currentUser: User,
     typingUsers: List<String>,
     onOpenProfile: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenAdmin: () -> Unit
 ) {
     Column(
@@ -275,6 +287,22 @@ private fun ChatTopBar(
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
+                }
+                Spacer(Modifier.width(6.dp))
+            }
+            // زر الإعدادات الجديد — متاح لكل مستخدم عادي (وليس المسؤولين فقط)،
+            // يفتح شاشة الإعدادات المستقلة (المظهر، شكل الفقاعات، تحديث التطبيق...).
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = "الإعدادات",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
@@ -404,19 +432,21 @@ private fun ChatInputBar(
             }
         }
 
-        // كل عناصر الصف هنا موحَّدة على ارتفاع 44dp بالضبط ومحاذاة مركزية
-        // (بدل محاذاة أسفلية سابقاً كانت تجعل أيقونة الستيكرات تبدو أخفض من
-        // بقية الصف) — هذا هو ما كان يجعل الشريط يبدو "غير متناسق".
+        // شريط الإدخال بأسلوب إنستقرام بالكامل: أيقونة كاميرا دائرية أولاً، ثم
+        // حقل الإدخال بشكل كبسولة يحوي زر الإيموجي داخله يميناً، ثم خارج
+        // الكبسولة أزرار الستيكرات/المعرض، وأخيراً زر يتبدّل بين المايكروفون
+        // (عند فراغ الحقل) وزر الإرسال المتدرّج (عند وجود نص) — بالضبط كما في
+        // تطبيق إنستقرام الفعلي.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             InputRoundIconButton(
-                icon = Icons.Filled.PhotoLibrary,
-                contentDescription = "الستيكرات",
-                onClick = onOpenStickers
+                icon = Icons.Filled.CameraAlt,
+                contentDescription = "كاميرا",
+                onClick = { /* لم تُفعَّل بعد — محجوزة لالتقاط صورة مباشرة */ }
             )
 
             Spacer(Modifier.width(6.dp))
@@ -464,7 +494,20 @@ private fun ChatInputBar(
                         maxLines = 4
                     )
                 }
+                // زر الستيكرات — داخل الكبسولة، ملاصق للطرف الآخر من حقل النص
+                // تماماً كأزرار الملصقات/GIF داخل شريط إنستقرام الفعلي.
+                IconButton(onClick = onOpenStickers, modifier = Modifier.size(36.dp)) {
+                    Text("🎨", fontSize = 19.sp)
+                }
             }
+
+            Spacer(Modifier.width(6.dp))
+
+            InputRoundIconButton(
+                icon = Icons.Filled.Image,
+                contentDescription = "المعرض",
+                onClick = { /* لم تُفعَّل بعد — محجوزة لإرسال صورة من المعرض */ }
+            )
 
             Spacer(Modifier.width(6.dp))
 
@@ -477,17 +520,26 @@ private fun ChatInputBar(
                     .clip(CircleShape)
                     .background(
                         if (canSend) Brush.linearGradient(BrandGradient)
-                        else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant))
+                        else MaterialTheme.colorScheme.surfaceVariant.let { Brush.linearGradient(listOf(it, it)) }
                     )
-                    .clickable(enabled = canSend, onClick = onSend),
+                    .clickable(enabled = true) { if (canSend) onSend() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Filled.ArrowUpward,
-                    contentDescription = "إرسال",
-                    tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
+                if (canSend) {
+                    Icon(
+                        Icons.Filled.ArrowUpward,
+                        contentDescription = "إرسال",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Mic,
+                        contentDescription = "تسجيل صوتي",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

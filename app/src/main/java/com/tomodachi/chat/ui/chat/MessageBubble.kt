@@ -53,6 +53,8 @@ import com.tomodachi.chat.data.model.Message
 import com.tomodachi.chat.data.model.MessageStatus
 import com.tomodachi.chat.data.model.MessageType
 import com.tomodachi.chat.ui.theme.BrandGradient
+import com.tomodachi.chat.ui.theme.BubbleShapeStyle
+import com.tomodachi.chat.ui.theme.bubbleShapeFor
 import com.tomodachi.chat.util.formatMessageTime
 import com.tomodachi.chat.util.parseHexColor
 import com.tomodachi.chat.util.readableTextColorFor
@@ -86,7 +88,9 @@ fun MessageBubble(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onRetry: () -> Unit,
-    onReact: (String) -> Unit
+    onReact: (String) -> Unit,
+    bubbleShapeStyle: BubbleShapeStyle = BubbleShapeStyle.MODERN,
+    fontScale: Float = 1.0f
 ) {
     var showActions by remember { mutableStateOf(false) }
     // إحداثيات فقاعة الرسالة نفسها بالنسبة لنافذة التطبيق كاملة — تُلتَقط في كل
@@ -96,11 +100,9 @@ fun MessageBubble(
 
     val bubbleColor = parseHexColor(message.bubbleColorHex)
     val textColor = readableTextColorFor(bubbleColor)
-    val bubbleShape = RoundedCornerShape(
-        topStart = 18.dp, topEnd = 18.dp,
-        bottomStart = if (isMine) 18.dp else 4.dp,
-        bottomEnd = if (isMine) 4.dp else 18.dp
-    )
+    // شكل الفقاعة أصبح قابلاً للتخصيص من شاشة الإعدادات (BubbleShapeStyle)
+    // بدل شكل ثابت واحد فقط كما كان سابقاً.
+    val bubbleShape = bubbleShapeFor(bubbleShapeStyle, isMine)
 
     // --- سحب أفقي للرد على الرسالة (بأي اتجاه)، على طراز واتساب/تيليجرام ---
     val density = LocalDensity.current
@@ -282,7 +284,13 @@ fun MessageBubble(
                                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                     )
                                 } else {
-                                    Text(message.text, color = textColor, style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        message.text,
+                                        color = textColor,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = MaterialTheme.typography.bodyLarge.fontSize * fontScale
+                                        )
+                                    )
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -354,8 +362,7 @@ fun MessageBubble(
     }
 }
 
-/** أيقونات حالة الرسالة بأسلوب واتساب: ساعة (يُرسَل)، صح واحد (أُرسِل). */
-@Composable
+/** أيقونات حالة الرسالة بأسلوب واتساب: ساعة (يُرسَل)، صح واحد (أُرسِل). */@Composable
 private fun MessageStatusTick(status: MessageStatus, tint: androidx.compose.ui.graphics.Color) {
     when (status) {
         MessageStatus.SENDING -> Icon(
@@ -547,4 +554,22 @@ private fun ContextMenuRow(
         Spacer(Modifier.weight(1f))
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(19.dp))
     }
+}
+
+/**
+ * معاينة صغيرة لشكل فقاعة دردشة — تُستخدم في شاشة الإعدادات لعرض كل نمط من
+ * [BubbleShapeStyle] بصرياً بدل الاكتفاء باسمه فقط، كي يختار المستخدم بثقة.
+ */
+@Composable
+fun MessageBubblePreview(style: BubbleShapeStyle, selected: Boolean) {
+    val shape = bubbleShapeFor(style, isMine = true)
+    Box(
+        modifier = Modifier
+            .size(width = 46.dp, height = 30.dp)
+            .clip(shape)
+            .background(
+                if (selected) Brush.linearGradient(BrandGradient)
+                else Brush.linearGradient(listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant))
+            )
+    )
 }
