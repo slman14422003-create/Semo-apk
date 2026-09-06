@@ -25,6 +25,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Tomodachi.Splash"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
