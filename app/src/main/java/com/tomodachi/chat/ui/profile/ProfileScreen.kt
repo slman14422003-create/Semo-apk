@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -52,8 +51,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     currentUser: User,
-    darkModePref: String,
-    onDarkModePrefChanged: (String) -> Unit,
     onUserUpdated: () -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
@@ -310,18 +307,10 @@ fun ProfileScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                SectionCard {
-                    SectionHeader(icon = Icons.Filled.DarkMode, title = "المظهر")
-                    Spacer(Modifier.height(10.dp))
-                    SingleChoiceSegmented(
-                        options = listOf("system" to "النظام", "light" to "فاتح", "dark" to "داكن"),
-                        selected = darkModePref,
-                        onSelected = onDarkModePrefChanged
-                    )
-                }
-
-                Spacer(Modifier.height(14.dp))
-
+                // ملاحظة: إعدادات المظهر العامة (الوضع الداكن/الفاتح، لون العلامة،
+                // شكل الفقاعات، حجم الخط) انتقلت إلى شاشة "الإعدادات" المستقلة
+                // (يُفتَح بأيقونة الترس ⚙️ من أعلى شاشة الدردشة) — هنا يبقى فقط لون
+                // فقاعة رسائلك أنت تحديداً، لأنه جزء من هويتك يظهر لبقية المستخدمين.
                 SectionCard {
                     SectionHeader(icon = Icons.Filled.Palette, title = "لون فقاعة رسائلك")
                     Spacer(Modifier.height(10.dp))
