@@ -233,16 +233,19 @@ private fun ChatTopBar(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f).clickable(onClick = onOpenProfile)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // اسم المستخدم الحالي بدل اسم التطبيق الثابت — كل مستخدم
+                    // يرى اسمه هو في أعلى شاشته، لا اسم "Tomodachi" العام.
                     Text(
-                        "Tomodachi",
+                        currentUser.username,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
                     )
                     Spacer(Modifier.width(5.dp))
                     Icon(
                         Icons.Filled.Groups,
-                        contentDescription = null,
+                        contentDescription = "دردشة جماعية",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
@@ -401,60 +404,72 @@ private fun ChatInputBar(
             }
         }
 
+        // كل عناصر الصف هنا موحَّدة على ارتفاع 44dp بالضبط ومحاذاة مركزية
+        // (بدل محاذاة أسفلية سابقاً كانت تجعل أيقونة الستيكرات تبدو أخفض من
+        // بقية الصف) — هذا هو ما كان يجعل الشريط يبدو "غير متناسق".
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.Bottom
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onOpenStickers, modifier = Modifier.size(40.dp)) {
-                Icon(
-                    Icons.Filled.PhotoLibrary,
-                    contentDescription = "الستيكرات",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Spacer(Modifier.width(2.dp))
+            InputRoundIconButton(
+                icon = Icons.Filled.PhotoLibrary,
+                contentDescription = "الستيكرات",
+                onClick = onOpenStickers
+            )
+
+            Spacer(Modifier.width(6.dp))
 
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 46.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(24.dp))
-                    .padding(horizontal = 6.dp),
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onOpenEmoji, modifier = Modifier.size(34.dp)) {
+                IconButton(onClick = onOpenEmoji, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Filled.EmojiEmotions,
                         contentDescription = "إيموجي",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(21.dp)
                     )
                 }
-                TextField(
-                    value = inputText,
-                    onValueChange = onInputTextChange,
-                    placeholder = { Text("اكتب رسالة…", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 4
-                )
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    TextField(
+                        value = inputText,
+                        onValueChange = onInputTextChange,
+                        placeholder = {
+                            Text(
+                                "اكتب رسالة…",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 44.dp),
+                        maxLines = 4
+                    )
+                }
             }
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
 
             val canSend = inputText.isNotBlank()
-            val sendScale by animateFloatAsState(if (canSend) 1f else 0.9f, label = "send_scale")
+            val sendScale by animateFloatAsState(if (canSend) 1f else 0.88f, label = "send_scale")
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -475,5 +490,30 @@ private fun ChatInputBar(
                 )
             }
         }
+    }
+}
+
+/** زر أيقونة دائري موحّد المقاس (44dp) لكل أزرار شريط الكتابة الجانبية،
+ * بخلفية ناعمة ثابتة — هذا التوحيد هو ما يحل مشكلة عدم اتساق الشريط. */
+@Composable
+private fun InputRoundIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
