@@ -16,10 +16,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +31,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +44,9 @@ import com.tomodachi.chat.ui.theme.BrandGradient
 import com.tomodachi.chat.ui.theme.WhatsAppGreen
 import com.tomodachi.chat.util.AVATAR_EMOJI_CHOICES
 import com.tomodachi.chat.util.BUBBLE_COLOR_PALETTE
+import com.tomodachi.chat.util.formatJoinDate
 import com.tomodachi.chat.util.parseHexColor
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +67,8 @@ fun ProfileScreen(
     val isUploadingImage by viewModel.isUploadingImage.collectAsStateWithLifecycle()
     val imageError by viewModel.imageError.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -168,7 +176,15 @@ fun ProfileScreen(
 
                 Spacer(Modifier.height(10.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // النقر على الاسم ينسخه للحافظة — ميزة صغيرة عملية (مشاركة
+                // اسم المستخدم مع صديق مثلاً) لم تكن موجودة سابقاً.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable {
+                        clipboardManager.setText(AnnotatedString(currentUser.username))
+                        coroutineScope.launch { snackbarHostState.showSnackbar("تم نسخ اسم المستخدم") }
+                    }
+                ) {
                     Text(
                         currentUser.username,
                         style = MaterialTheme.typography.titleLarge,
@@ -183,6 +199,13 @@ fun ProfileScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        Icons.Filled.ContentCopy,
+                        contentDescription = "نسخ اسم المستخدم",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
 
                 Row(
@@ -203,15 +226,55 @@ fun ProfileScreen(
                     )
                 }
 
-                if (currentUser.isAdmin) {
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 10.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Brush.horizontalGradient(BrandGradient))
-                            .padding(horizontal = 14.dp, vertical = 5.dp)
-                    ) {
-                        Text("مسؤول النظام", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                // تاريخ الانضمام — معلومة كانت مخزَّنة أصلاً (createdAtMillis)
+                // لكنها لم تُعرض للمستخدم أبداً في أي مكان بالتطبيق.
+                if (currentUser.createdAtMillis > 0L) {
+                    Text(
+                        formatJoinDate(currentUser.createdAtMillis),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (currentUser.isAdmin) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Brush.horizontalGradient(BrandGradient))
+                                .padding(horizontal = 14.dp, vertical = 5.dp)
+                        ) {
+                            Text("مسؤول النظام", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    // شارة تحذيرات — تنبيه لطيف للمستخدم نفسه بعدد المخالفات
+                    // المسجَّلة عليه (كانت هذه البيانات موجودة لكن غير مرئية إطلاقاً).
+                    if (currentUser.warningsCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(horizontal = 12.dp, vertical = 5.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.WarningAmber,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "${currentUser.warningsCount}/${User.MAX_WARNINGS_BEFORE_BAN} تحذيرات",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
