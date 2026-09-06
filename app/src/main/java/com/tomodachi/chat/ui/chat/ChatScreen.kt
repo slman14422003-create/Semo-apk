@@ -5,7 +5,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -156,23 +155,20 @@ fun ChatScreen(
         bottomBar = {
             Column(
                 modifier = Modifier
-                    .shadow(elevation = 8.dp)
                     .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                     .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                    .navigationBarsPadding()
-                    .imePadding()
+                    // نأخذ "الأكبر" بين ارتفاع لوحة المفاتيح وارتفاع شريط التنقل بدل
+                    // جمعهما (union) — فجمعهما كوسادتين منفصلتين هو بالضبط ما كان
+                    // يُنتج الفراغ الفارغ فوق لوحة المفاتيح مباشرة عند فتحها.
+                    .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
             ) {
+                // خط فاصل رفيع ومسطّح بدل ظل ثقيل — أقرب لأسلوب انستقرام المسطّح
+                // في شريط الكتابة، بدل مظهر "بطاقة عائمة" مبالغ فيه.
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    thickness = 0.6.dp
+                )
                 val activePreview = editingMessage ?: replyTarget
-                if (activePreview == null) {
-                    // خط تدرّج رفيع أعلى الشريط السفلي أيضاً، ليطابق الخط أعلى شريط
-                    // الدردشة ويعطي إحساساً موحّداً بهوية العلامة من أعلى الشاشة لأسفلها.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .background(Brush.horizontalGradient(BrandGradient))
-                    )
-                }
                 AnimatedVisibility(visible = activePreview != null) {
                     if (activePreview != null) {
                         Row(
@@ -240,11 +236,10 @@ fun ChatScreen(
                     Row(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 44.dp)
+                            .heightIn(min = 46.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { showEmojiSheet = true }, modifier = Modifier.size(34.dp)) {
